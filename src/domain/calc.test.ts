@@ -25,7 +25,7 @@ const evento = (abonos: Evento['abonos'] = []): Evento => ({
   recordatorios: { diasAntes: 3, hora: '09:00', whatsapp: true, push: false, repetirVencidos: true, cadaDias: 3 },
 })
 const abono = (personaId: string, conceptoId: string, monto: number) =>
-  ({ id: Math.random().toString(), personaId, conceptoId, monto, fecha: '2026-09-01', metodo: 'Efectivo' as const, comprobante: null })
+  ({ id: Math.random().toString(), personaId, conceptoId, monto, fecha: '2026-09-01', metodo: 'Efectivo' as const, comprobante: null, estado: 'validado' as const })
 
 describe('tarifas y reparto', () => {
   it('2 adultos y 2 menores de hospedaje suman 8,000', () => {

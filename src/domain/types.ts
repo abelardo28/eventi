@@ -37,6 +37,8 @@ export interface Persona {
   tipo: TipoRegistro
   telefono: string
   cargos: Cargo[]
+  /** Cuenta de participante vinculada (puede ver su estado de cuenta y subir comprobantes). */
+  usuarioId?: string | null
 }
 
 export type Metodo = 'Efectivo' | 'Transferencia' | 'Depósito'
@@ -56,7 +58,14 @@ export interface Abono {
   fecha: ISODate
   metodo: Metodo
   comprobante: Comprobante | null
+  /** Los abonos que sube un participante quedan pendientes hasta que alguien los valida. */
+  estado: EstadoAbono
+  registradoPor?: string | null
+  validadoPor?: string | null
+  motivoRechazo?: string
 }
+
+export type EstadoAbono = 'validado' | 'pendiente' | 'rechazado'
 
 export interface Movimiento {
   id: string
@@ -107,7 +116,26 @@ export interface Evento {
   envios: Envio[]
 }
 
+export type Rol = 'admin' | 'capturista' | 'participante'
+
+export interface Usuario {
+  id: string
+  nombre: string
+  email: string
+  telefono: string
+  rol: Rol
+  activo: boolean
+  /** Capturista: eventos que puede trabajar; null = todos. */
+  eventos: string[] | null
+  /** PBKDF2-SHA256 en base64 (solo mientras no haya servidor de autenticación). */
+  hash: string
+  salt: string
+  debeCambiarPassword?: boolean
+  creado: ISODate
+}
+
 export interface Db {
-  version: 1
+  version: 2
   eventos: Evento[]
+  usuarios: Usuario[]
 }

@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom'
 import { useStore } from '../../data/store'
-import { cargo, concepto, debido, esperado, money, pagado, pct, plan, plural, totalGastado, totalRecuperado, vencido } from '../../domain/calc'
+import { cargo, concepto, debido, esperado, money, pagado, pct, plan, plural, porValidar, totalGastado, totalRecuperado, vencido } from '../../domain/calc'
+import { puede } from '../../domain/permisos'
+import { AbonoPendiente } from '../../ui/Pendientes'
 import { addDays, fCorta } from '../../domain/fechas'
 import type { Evento } from '../../domain/types'
 import { Avatar, Bar, DateBadge } from '../../ui/kit'
 
 export function TabResumen({ ev }: { ev: Evento }) {
-  const { hoy } = useStore()
+  const { hoy, usuario } = useStore()
+  const pendientes = puede(usuario, 'abonos.validar', ev.id) ? porValidar(ev) : []
   const esp = esperado(ev), pag = pagado(ev), v = vencido(ev, hoy), deb = debido(ev, hoy)
   const gast = totalGastado(ev), rec = totalRecuperado(ev)
   const atrasados = ev.personas.map(p => ({ p, v: vencido(ev, hoy, p.id) })).filter(x => x.v > 0).sort((a, b) => b.v - a.v)
@@ -26,6 +29,13 @@ export function TabResumen({ ev }: { ev: Evento }) {
 
   return (
     <div className="stack-lg">
+      {pendientes.length > 0 && (
+        <section className="glass panel stack">
+          <div className="between"><h2>Por validar</h2><span className="pill warn">{pendientes.length}</span></div>
+          <div className="small muted">Comprobantes que subieron los participantes. No cuentan en los totales hasta que los valides.</div>
+          {pendientes.map(a => <AbonoPendiente key={a.id} ev={ev} a={a} mostrarPersona />)}
+        </section>
+      )}
       <section className="glass panel stack">
         <div className="between"><span className="eyebrow">Recaudado</span>{v > 0 ? <span className="pill bad">{money(v)} vencido</span> : <span className="pill ok">Sin atrasos</span>}</div>
         <div className="hero num">{pct(pag, esp)}<small>%</small></div>

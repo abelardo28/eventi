@@ -5,19 +5,25 @@ import { prepararComprobante } from '../data/comprobantes'
 import { cargo, composicion, concepto, money, pagado, siguiente } from '../domain/calc'
 import { fCorta } from '../domain/fechas'
 import type { Comprobante, Evento, Metodo } from '../domain/types'
+import { puede } from '../domain/permisos'
 import { IcUpload } from '../ui/icons'
 import { Chips } from '../ui/kit'
 import { Sheet, useToast } from '../ui/overlay'
 
 const METODOS = ['Efectivo', 'Transferencia', 'Depósito'] as const
+const METODOS_PART = ['Transferencia', 'Depósito'] as const
 
 export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento; personaId?: string; conceptoId?: string; onClose: () => void }) {
-  const { hoy, editarEvento } = useStore()
+  const { hoy, editarEvento, usuario } = useStore()
+  // Quien no puede registrar abonos (participante) envía un comprobante que queda por validar.
+  const propuesta = !puede(usuario, 'abonos.registrar', ev.id)
   const { toast } = useToast()
-  const conCargos = ev.personas.filter(p => p.cargos.length)
+  const conCargos = ev.personas.filter(p => p.cargos.length && (!propuesta || p.id === personaId))
   const [pid, setPid] = useState(personaId ?? conCargos[0]?.id ?? '')
   const persona = ev.personas.find(p => p.id === pid)
-  const [cid, setCid] = useState(conceptoId && persona && cargo(persona, conceptoId) ? conceptoId : persona?.cargos[0]?.conceptoId ?? '')
+  // Por omisión, el primer concepto que todavía tiene saldo
+  const conSaldo = (pp: typeof persona) => pp?.cargos.find(g => { const cc = concepto(ev, g.conceptoId); return cc && siguiente(ev, pp, cc, hoy) })?.conceptoId ?? pp?.cargos[0]?.conceptoId ?? ''
+  const [cid, setCid] = useState(conceptoId && persona && cargo(persona, conceptoId) ? conceptoId : conSaldo(persona))
   const c = concepto(ev, cid)
   const sig = useMemo(() => (persona && c ? siguiente(ev, persona, c, hoy) : null), [ev, persona, c, hoy])
   const [monto, setMonto] = useState(sig ? String(sig.monto) : '')
@@ -28,7 +34,7 @@ export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento;
 
   const elegir = (nuevoPid: string, nuevoCid?: string) => {
     const p = ev.personas.find(x => x.id === nuevoPid)!
-    const k = nuevoCid ?? p.cargos[0]?.conceptoId ?? ''
+    const k = nuevoCid ?? conSaldo(p)
     setPid(nuevoPid); setCid(k)
     const cc = concepto(ev, k)
     const s = cc ? siguiente(ev, p, cc, hoy) : null
@@ -45,20 +51,25 @@ export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento;
     const m = Number(monto)
     if (!persona || !c) { toast('Elige persona y concepto'); return }
     if (!(m > 0)) { toast('Escribe el monto del abono'); return }
+    if (propuesta && !comp) { toast('Sube la foto o PDF del comprobante'); return }
     const ok = editarEvento(ev.id, e => {
-      e.abonos.unshift({ id: uid('a'), personaId: persona.id, conceptoId: c.id, monto: m, fecha: fecha || hoy, metodo, comprobante: metodo === 'Efectivo' ? null : comp })
+      e.abonos.unshift({
+        id: uid('a'), personaId: persona.id, conceptoId: c.id, monto: m, fecha: fecha || hoy, metodo,
+        comprobante: metodo === 'Efectivo' ? null : comp, estado: propuesta ? 'pendiente' : 'validado', registradoPor: usuario?.id ?? null,
+      })
     })
-    if (ok) { toast(`Abono de ${money(m)} registrado`); onClose() }
+    if (ok) { toast(propuesta ? 'Comprobante enviado. Te avisaremos cuando lo validen' : `Abono de ${money(m)} registrado`); onClose() }
   }
 
   const g = persona && c ? cargo(persona, c.id) : undefined
   return (
-    <Sheet title="Registrar abono" onClose={onClose} onSubmit={guardar}>
-      <label className="f">Persona o familia
+    <Sheet title={propuesta ? 'Enviar comprobante de pago' : 'Registrar abono'} onClose={onClose} onSubmit={guardar}>
+      {propuesta && <div className="small muted">El organizador revisará tu comprobante. Mientras tanto aparecerá como “por validar”.</div>}
+      {!propuesta && <label className="f">Persona o familia
         <select className="inp" id="ab-p" value={pid} onChange={e => elegir(e.target.value)}>
           {conCargos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
         </select>
-      </label>
+      </label>}
       <label className="f">Concepto
         <select className="inp" id="ab-c" value={cid} onChange={e => elegir(pid, e.target.value)}>
           {persona?.cargos.map(x => <option key={x.conceptoId} value={x.conceptoId}>{concepto(ev, x.conceptoId)?.nombre}</option>)}
@@ -74,7 +85,7 @@ export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento;
         <label className="f">Monto<input className="inp num" id="ab-m" type="number" inputMode="decimal" min={1} value={monto} onChange={e => setMonto(e.target.value)} /></label>
         <label className="f">Fecha<input className="inp" id="ab-f" type="date" max={hoy} value={fecha} onChange={e => setFecha(e.target.value)} /></label>
       </div>
-      <div className="f">Forma de pago<Chips options={METODOS} value={metodo} onChange={setMetodo} /></div>
+      <div className="f">Forma de pago<Chips options={propuesta ? METODOS_PART : METODOS} value={metodo} onChange={setMetodo} /></div>
       {metodo !== 'Efectivo' && (
         <div className="stack" style={{ gap: 8 }}>
           <div className={`drop ${comp ? 'has' : ''}`}>
@@ -85,7 +96,7 @@ export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento;
           {comp && (comp.tipo.startsWith('image/') ? <img className="thumb" src={comp.data} alt="Comprobante" /> : <span className="pill neutral">{comp.nombre}</span>)}
         </div>
       )}
-      <button className="btn block" type="submit" disabled={subiendo}>Guardar abono</button>
+      <button className="btn block" type="submit" disabled={subiendo}>{propuesta ? 'Enviar comprobante' : 'Guardar abono'}</button>
     </Sheet>
   )
 }

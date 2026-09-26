@@ -11,7 +11,14 @@ App web (adaptada al celular e instalable como PWA) para organizar eventos y lle
 - Actividades con movimientos de gasto e ingreso y su ganancia.
 - Recordatorios: configuración de días de aviso, cola de envíos y botón que abre WhatsApp con el mensaje listo (`wa.me`).
 
-Los datos se guardan **solo en el navegador** (`localStorage`) mientras no haya servidor.
+- **Cuentas y roles:** iniciar sesión, registrarse y gestión de usuarios.
+  - *Administrador:* todo, incluidos usuarios, eventos, conceptos y borrar registros.
+  - *Capturista:* registra y valida abonos, agrega y edita personas, registra gastos e ingresos y manda recordatorios en los eventos asignados. No borra.
+  - *Participante:* ve su estado de cuenta y envía comprobantes, que quedan **por validar** y no cuentan hasta que se aprueban.
+  - La primera cuenta creada es administradora; los registros nuevos entran como participantes y se vinculan solos si su WhatsApp coincide con el de una persona del evento. Las cuentas que crea el administrador reciben contraseña temporal y deben cambiarla al entrar.
+  - Cuentas de prueba (contraseña `demo1234`): `admin@eventi.demo`, `capturista@eventi.demo`, `luis@eventi.demo`.
+
+Los datos y las cuentas se guardan **solo en el navegador** (`localStorage`, contraseñas con PBKDF2) mientras no haya servidor. Esto sirve para probar, pero no es seguridad real: quien tenga el dispositivo puede leer los datos. La seguridad real llega con Supabase Auth y las políticas de `supabase/migrations/0002_roles.sql`.
 
 ## Cómo correrla
 
@@ -27,7 +34,7 @@ npm run build    # genera dist/ (sitio estático)
 ## Estructura
 
 ```
-src/domain/     Tipos y cálculos puros (plan de pagos, vencidos, recordatorios) + pruebas
+src/domain/     Tipos, cálculos, permisos por rol y contraseñas (funciones puras) + pruebas
 src/data/       Guardado (repo.ts), datos de ejemplo, contexto de la app
 src/pages/      Inicio, evento (pestañas) y ficha de persona
 src/sheets/     Formularios en hoja inferior
@@ -38,7 +45,6 @@ supabase/       Esquema de base de datos para la siguiente etapa
 
 ## Siguientes pasos
 
-1. **Cuentas y datos en la nube:** crear un proyecto de Supabase, aplicar `supabase/migrations/0001_inicial.sql` y escribir un `Repositorio` que use Supabase en lugar de `localStorage` (`src/data/repo.ts`). Los comprobantes van al bucket privado `comprobantes`.
+1. **Cuentas y datos en la nube:** crear un proyecto de Supabase, aplicar `supabase/migrations/` (0001 y 0002) y escribir un `Repositorio` que use Supabase en lugar de `localStorage` (`src/data/repo.ts`). Los comprobantes van al bucket privado `comprobantes`.
 2. **Recordatorios automáticos:** una tarea programada diaria (Supabase cron / Edge Function) que recorra la cola (`cola()` en `src/domain/calc.ts`) y envíe por la API de WhatsApp Business (Meta Cloud API o Twilio). Requiere plantillas de mensaje aprobadas por Meta.
 3. **Notificaciones push:** Web Push con claves VAPID, suscripción desde la PWA y envío desde la misma tarea programada.
-4. **Acceso para participantes:** enlace para que cada persona vea su estado de cuenta y suba sus comprobantes.

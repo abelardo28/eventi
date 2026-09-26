@@ -1,10 +1,13 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { EstadoK } from '../domain/calc'
 import { initials } from '../domain/calc'
 import type { Persona } from '../domain/types'
 import { fMes, toDate } from '../domain/fechas'
+import { ROLES } from '../domain/permisos'
+import { useStore } from '../data/store'
 import { IcBack, Logo } from './icons'
+import { CuentaSheet } from '../sheets/CuentaSheet'
 
 export function Bar({ value, tone, due, thick }: { value: number; tone?: 'bad' | 'done'; due?: number; thick?: boolean }) {
   return (
@@ -17,7 +20,7 @@ export function Bar({ value, tone, due, thick }: { value: number; tone?: 'bad' |
 
 export const Pill = ({ k, children }: { k: EstadoK; children: ReactNode }) => <span className={`pill ${k}`}>{children}</span>
 
-export function Avatar({ p, size }: { p: Pick<Persona, 'nombre' | 'tipo'>; size?: number }) {
+export function Avatar({ p, size }: { p: Pick<Persona, 'nombre'> & { tipo?: Persona['tipo'] }; size?: number }) {
   const style = size ? { width: size, height: size, fontSize: Math.round(size / 3.2) } : undefined
   return <span className={`av ${p.tipo === 'Familia' ? 'fam' : ''}`} style={style}>{initials(p.nombre)}</span>
 }
@@ -29,11 +32,19 @@ export function DateBadge({ fecha, hoy }: { fecha: string; hoy?: boolean }) {
 
 export function Topbar({ back }: { back?: string }) {
   const nav = useNavigate()
+  const { usuario } = useStore()
+  const [menu, setMenu] = useState(false)
   return (
     <header className="topbar">
       {back && <button className="iconbtn" onClick={() => nav(back)} aria-label="Regresar"><IcBack /></button>}
       <button className="brand" onClick={() => nav('/')} aria-label="Inicio de Eventi"><Logo /><span>eventi</span></button>
       <span className="spacer" />
+      {usuario && (
+        <button className="userbtn" onClick={() => setMenu(true)} aria-label="Mi cuenta">
+          <Avatar p={usuario} /><span className="rolchip">{ROLES[usuario.rol].nombre}</span>
+        </button>
+      )}
+      {menu && <CuentaSheet onClose={() => setMenu(false)} />}
     </header>
   )
 }

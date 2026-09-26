@@ -5,6 +5,9 @@ import { ToastProvider } from './ui/overlay'
 import { Home } from './pages/Home'
 import { Evento } from './pages/Evento'
 import { Persona } from './pages/Persona'
+import { MisPagos } from './pages/MisPagos'
+import { Usuarios } from './pages/Usuarios'
+import { Acceso, CambiarPasswordObligatorio } from './pages/Acceso'
 import { NoEncontrado } from './pages/NoEncontrado'
 
 function ScrollArriba() {
@@ -20,21 +23,29 @@ function ErrorGuardado() {
   return <div className="error-banner" role="alert"><span>{error}</span><button onClick={limpiarError}>Entendido</button></div>
 }
 
+function Rutas() {
+  const { usuario } = useStore()
+  if (!usuario) return <Acceso />
+  if (usuario.debeCambiarPassword) return <CambiarPasswordObligatorio />
+  return (
+    <Routes>
+      <Route path="/" element={usuario.rol === 'participante' ? <MisPagos /> : <Home />} />
+      <Route path="/usuarios" element={<Usuarios />} />
+      <Route path="/e/:id" element={<Evento />} />
+      <Route path="/e/:id/p/:pid" element={<Persona />} />
+      <Route path="/e/:id/:tab" element={<Evento />} />
+      <Route path="*" element={<NoEncontrado />} />
+    </Routes>
+  )
+}
+
 export default function App() {
   return (
     <StoreProvider>
       <ToastProvider>
         <HashRouter>
           <ScrollArriba />
-          <main className="app">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/e/:id" element={<Evento />} />
-              <Route path="/e/:id/p/:pid" element={<Persona />} />
-              <Route path="/e/:id/:tab" element={<Evento />} />
-              <Route path="*" element={<NoEncontrado />} />
-            </Routes>
-          </main>
+          <main className="app"><Rutas /></main>
           <ErrorGuardado />
         </HashRouter>
       </ToastProvider>

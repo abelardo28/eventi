@@ -1,7 +1,22 @@
-import type { Actividad, Cargo, Concepto, Db, Evento, Metodo, Persona } from '../domain/types'
+import type { Actividad, Cargo, Concepto, Db, Evento, Metodo, Persona, Usuario } from '../domain/types'
 import { plan, porTarifa } from '../domain/calc'
 import { addDays, addMonths } from '../domain/fechas'
 import { uid } from './uid'
+
+/** Contraseña de las cuentas de prueba (hash PBKDF2 precalculado). */
+export const PASSWORD_DEMO = 'demo1234'
+const HASH_DEMO = { hash: '3lFl2SbtisXL1OENpQqFmfAvKvzfNpElaT+rwRRo/Iw=', salt: 'YZ36fTc1p/wvnhajvSml2w==' }
+
+export const CUENTAS_DEMO = [
+  { email: 'admin@eventi.demo', rol: 'admin', nombre: 'Abelardo (administrador)' },
+  { email: 'capturista@eventi.demo', rol: 'capturista', nombre: 'Rosa Medina (capturista)' },
+  { email: 'luis@eventi.demo', rol: 'participante', nombre: 'Luis Hernández (participante)' },
+] as const
+
+function comprobanteDemo(monto: number): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220"><rect width="320" height="220" rx="18" fill="#fff"/><rect width="320" height="54" rx="18" fill="#1d3b6e"/><rect y="36" width="320" height="18" fill="#1d3b6e"/><text x="20" y="34" font-family="Arial" font-size="16" fill="#fff" font-weight="700">Banco de ejemplo</text><text x="160" y="100" text-anchor="middle" font-family="Arial" font-size="13" fill="#555">Transferencia exitosa</text><text x="160" y="140" text-anchor="middle" font-family="Arial" font-size="28" font-weight="700" fill="#111">$${monto.toLocaleString('es-MX')}</text><text x="160" y="196" text-anchor="middle" font-family="Arial" font-size="11" fill="#999">Comprobante de ejemplo</text></svg>`
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
+}
 
 /** Evento de ejemplo con fechas relativas a hoy, para que siempre se vea "vivo". */
 export function datosEjemplo(hoy: string): Db {
@@ -24,10 +39,14 @@ export function datosEjemplo(hoy: string): Db {
     ['Familia Valdez', 'Familia', { hos: [2, 3], tra: [2, 3] }],
     ['Iván Castro', 'Persona', { hos: 1800, tra: [1, 0] }],
   ]
+  const usuarios: Usuario[] = CUENTAS_DEMO.map(c => ({
+    id: uid('u'), nombre: c.nombre.replace(/ \(.*\)$/, ''), email: c.email, telefono: '', rol: c.rol, activo: true, eventos: null, creado: hoy, ...HASH_DEMO,
+  }))
   const avance = [0.72, 0.85, 0.62, 0.5, 1, 0.3, 0.7, 0.18, 0.55, 1]
   const conceptos = [T.ins, T.hos, T.tra, T.uni]
   const personas: Persona[] = gente.map(([nombre, tipo, cs], i) => ({
     id: uid('p'), nombre, tipo, telefono: '667 555 0' + String(101 + i).slice(-3),
+    usuarioId: i === 0 ? usuarios[2].id : null,
     cargos: Object.entries(cs).map(([k, v]): Cargo => {
       const c = T[k]
       if (Array.isArray(v)) return { conceptoId: c.id, adultos: v[0], menores: v[1], monto: porTarifa(c, v[0], v[1]) }
@@ -65,9 +84,13 @@ export function datosEjemplo(hoy: string): Db {
       rest -= m
       let fecha = addDays(q.fecha, -2 - ((i + j) % 6))
       if (fecha > hoy) fecha = addDays(hoy, -((i + j) % 9))
-      ev.abonos.push({ id: uid('a'), personaId: p.id, conceptoId: c.id, monto: m, fecha, metodo: metodos[k++ % 3], comprobante: null })
+      ev.abonos.push({ id: uid('a'), personaId: p.id, conceptoId: c.id, monto: m, fecha, metodo: metodos[k++ % 3], comprobante: null, estado: 'validado', registradoPor: usuarios[0].id })
     }
   }))
+  // Un comprobante que subió el participante y espera validación
+  const luis = personas[0]
+  ev.abonos.push({ id: uid('a'), personaId: luis.id, conceptoId: T.hos.id, monto: 1000, fecha: addDays(hoy, -1), metodo: 'Transferencia',
+    comprobante: { nombre: 'transferencia.svg', tipo: 'image/svg+xml', data: comprobanteDemo(1000) }, estado: 'pendiente', registradoPor: usuarios[2].id })
   ev.abonos.sort((a, b) => b.fecha.localeCompare(a.fecha))
-  return { version: 1, eventos: [ev] }
+  return { version: 2, eventos: [ev], usuarios }
 }

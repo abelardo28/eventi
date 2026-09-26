@@ -12,17 +12,21 @@ import { AbonoSheet } from '../sheets/AbonoSheet'
 import { PersonaSheet } from '../sheets/PersonaSheet'
 import { ComprobanteSheet } from '../sheets/ComprobanteSheet'
 import { NoEncontrado } from './NoEncontrado'
+import { puede, puedeVerPersona } from '../domain/permisos'
+import { AbonoPendiente } from '../ui/Pendientes'
 
 export function Persona() {
   const { id, pid } = useParams()
-  const { evento, hoy, editarEvento } = useStore()
+  const { evento, hoy, editarEvento, usuario } = useStore()
   const { toast } = useToast()
   const nav = useNavigate()
   const [sheet, setSheet] = useState<{ t: 'abono'; c?: string } | { t: 'editar' } | { t: 'comp'; a: string } | null>(null)
   const [borrar, setBorrar] = useState(false)
   const ev = evento(id)
   const p = ev?.personas.find(x => x.id === pid)
-  if (!ev || !p) return <NoEncontrado />
+  if (!ev || !p || !puedeVerPersona(usuario, ev, p)) return <NoEncontrado />
+  const can = (a: Parameters<typeof puede>[1]) => puede(usuario, a, ev.id)
+  const participante = usuario?.rol === 'participante'
 
   const tot = totalPersona(p), pg = pagado(ev, p.id), st = estadoPersona(ev, p, hoy)
   const fuera = ev.conceptos.filter(c => !p.cargos.some(g => g.conceptoId === c.id))
@@ -45,12 +49,12 @@ export function Persona() {
 
   return (
     <>
-      <Topbar back={`/e/${ev.id}/personas`} />
+      <Topbar back={participante ? '/' : `/e/${ev.id}/personas`} />
       <section className="evhead row" style={{ gap: 14 }}>
         <Avatar p={p} size={58} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ fontSize: 26 }}>{p.nombre}</h1>
-          <div className="meta">{p.tipo} · {p.telefono || 'Sin WhatsApp'}</div>
+          <div className="meta">{participante ? ev.nombre : `${p.tipo} · ${p.telefono || 'Sin WhatsApp'}`}</div>
         </div>
       </section>
 
@@ -63,14 +67,14 @@ export function Persona() {
           </div>
           <Bar value={pct(pg, tot)} thick due={pct(debido(ev, hoy, p.id), tot)} />
           <div className="row wrap">
-            {p.cargos.length > 0 && <button className="btn" onClick={() => setSheet({ t: 'abono' })}><IcReceipt />Registrar abono</button>}
-            {wa && <a className="btn wa" href={wa} target="_blank" rel="noreferrer" onClick={registrarEnvio}><IcWa />Recordar por WhatsApp</a>}
+            {p.cargos.length > 0 && (can('abonos.registrar') || can('abonos.proponer')) && <button className="btn" onClick={() => setSheet({ t: 'abono' })}><IcReceipt />{participante ? 'Enviar comprobante' : 'Registrar abono'}</button>}
+            {wa && can('avisos.enviar') && <a className="btn wa" href={wa} target="_blank" rel="noreferrer" onClick={registrarEnvio}><IcWa />Recordar por WhatsApp</a>}
           </div>
-          {aviso && !wa && <div className="small faint">Agrega su número de WhatsApp para poder mandarle recordatorios.</div>}
+          {aviso && !wa && can('avisos.enviar') && <div className="small faint">Agrega su número de WhatsApp para poder mandarle recordatorios.</div>}
         </section>
 
         <section className="glass panel">
-          <div className="between"><h2>Sus conceptos</h2><button className="btn sm ghost" onClick={() => setSheet({ t: 'editar' })}><IcEdit />Editar</button></div>
+          <div className="between"><h2>{participante ? 'Tus conceptos' : 'Sus conceptos'}</h2>{can('personas.gestionar') && <button className="btn sm ghost" onClick={() => setSheet({ t: 'editar' })}><IcEdit />Editar</button>}</div>
           {p.cargos.map(g => {
             const c = concepto(ev, g.conceptoId)
             if (!c) return null
@@ -93,23 +97,26 @@ export function Persona() {
                 {s ? (
                   <div className="between">
                     <span className={`small ${s.vencida ? 'neg' : 'muted'}`}>{s.vencida ? `Vencido desde el ${fCorta(s.fecha)}` : `Próximo pago ${fCorta(s.fecha)}`}: <b className="num">{money(s.monto)}</b></span>
-                    <button className="btn sm ghost" onClick={() => setSheet({ t: 'abono', c: c.id })}>Abonar</button>
+                    {(can('abonos.registrar') || can('abonos.proponer')) && <button className="btn sm ghost" onClick={() => setSheet({ t: 'abono', c: c.id })}>{participante ? 'Pagar' : 'Abonar'}</button>}
                   </div>
                 ) : <span className="pill ok" style={{ alignSelf: 'flex-start' }}>Liquidado</span>}
               </div>
             )
           })}
-          {!p.cargos.length && <p className="muted small" style={{ marginTop: 12 }}>No tiene conceptos asignados. Toca Editar para asignarle.</p>}
+          {!p.cargos.length && <p className="muted small" style={{ marginTop: 12 }}>{participante ? 'Aún no tienes conceptos asignados.' : 'No tiene conceptos asignados. Toca Editar para asignarle.'}</p>}
           {fuera.length > 0 && <p className="small faint" style={{ margin: '14px 0 0' }}>No participa en: {fuera.map(c => c.nombre).join(', ')}</p>}
         </section>
 
         <section className="glass panel">
           <h2 style={{ marginBottom: 4 }}>Abonos</h2>
-          {abonos.map(a => (
+          {can('abonos.validar') && abonos.filter(a => a.estado === 'pendiente').map(a => <div key={a.id} style={{ marginBlock: 8 }}><AbonoPendiente ev={ev} a={a} /></div>)}
+          {abonos.filter(a => !(can('abonos.validar') && a.estado === 'pendiente')).map(a => (
             <div key={a.id} className="abono">
-              <span><b>{concepto(ev, a.conceptoId)?.nombre}</b><div className="small muted">{fCorta(a.fecha)} · {a.metodo}</div></span>
+              <span><b>{concepto(ev, a.conceptoId)?.nombre}</b><div className="small muted">{fCorta(a.fecha)} · {a.metodo}</div>
+                {a.estado === 'pendiente' && <span className="pill warn">Por validar</span>}
+                {a.estado === 'rechazado' && <span className="pill bad" title={a.motivoRechazo}>Rechazado</span>}</span>
               <span style={{ textAlign: 'right' }}>
-                <b className="num">{money(a.monto)}</b>
+                <b className={`num ${a.estado === 'rechazado' ? 'faint' : ''}`} style={a.estado === 'rechazado' ? { textDecoration: 'line-through' } : undefined}>{money(a.monto)}</b>
                 <div>{a.comprobante
                   ? <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })}>Ver comprobante</button>
                   : <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })} style={{ color: 'var(--faint)' }}>{a.metodo === 'Efectivo' ? 'Efectivo' : 'Sin comprobante'}</button>}</div>
@@ -119,14 +126,14 @@ export function Persona() {
           {!abonos.length && <p className="muted small">Aún no hay abonos.</p>}
         </section>
 
-        <section>
+        {can('personas.borrar') && <section>
           {borrar ? (
             <div className="confirm">
               <span>¿Quitar a {p.nombre} del evento? También se borran sus {abonos.length} abonos. No se puede deshacer.</span>
               <div className="row"><button className="btn sm danger" onClick={borrarPersona}><IcTrash />Sí, quitar</button><button className="btn sm ghost" onClick={() => setBorrar(false)}>Cancelar</button></div>
             </div>
           ) : <button className="linkbtn small danger" onClick={() => setBorrar(true)}>Quitar del evento</button>}
-        </section>
+        </section>}
       </div>
 
       {sheet?.t === 'abono' && <AbonoSheet ev={ev} personaId={p.id} conceptoId={sheet.c} onClose={() => setSheet(null)} />}

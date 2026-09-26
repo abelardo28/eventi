@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { gastado, money, recuperado, totalGastado, totalRecuperado } from '../../domain/calc'
 import type { Evento } from '../../domain/types'
+import { useStore } from '../../data/store'
+import { puede } from '../../domain/permisos'
 import { IcPlus } from '../../ui/icons'
 import { Bar } from '../../ui/kit'
 import { ActividadSheet, MovimientoSheet } from '../../sheets/ActividadSheets'
@@ -8,6 +10,8 @@ import { ActividadSheet, MovimientoSheet } from '../../sheets/ActividadSheets'
 const signo = (n: number) => (n >= 0 ? '+' : '−') + money(Math.abs(n))
 
 export function TabActividades({ ev }: { ev: Evento }) {
+  const { usuario } = useStore()
+  const movs = puede(usuario, 'actividades.movimientos', ev.id)
   const [sheet, setSheet] = useState<{ t: 'nueva' } | { t: 'mov'; id: string; tipo: 'gasto' | 'ingreso' } | null>(null)
   const gast = totalGastado(ev), rec = totalRecuperado(ev)
   const max = Math.max(1, ...ev.actividades.flatMap(a => [gastado(a), recuperado(a)]))
@@ -35,10 +39,10 @@ export function TabActividades({ ev }: { ev: Evento }) {
             </div>
             <div className="between wrap">
               <span className="small">{r - g >= 0 ? 'Ganancia' : 'Pérdida por ahora'} <b className={`num ${r - g >= 0 ? 'pos' : 'neg'}`}>{signo(r - g)}</b></span>
-              <span className="row" style={{ gap: 6 }}>
+              {movs && <span className="row" style={{ gap: 6 }}>
                 <button className="btn sm ghost" onClick={() => setSheet({ t: 'mov', id: a.id, tipo: 'gasto' })}>+ Gasto</button>
                 <button className="btn sm ghost" onClick={() => setSheet({ t: 'mov', id: a.id, tipo: 'ingreso' })}>+ Ingreso</button>
-              </span>
+              </span>}
             </div>
             {a.movimientos.length > 0 && (
               <details>
@@ -55,7 +59,7 @@ export function TabActividades({ ev }: { ev: Evento }) {
         )
       })}
       {!ev.actividades.length && <div className="glass panel empty">Registra rifas, loterías o ventas para llevar lo que se gastó y lo que se recuperó.</div>}
-      <button className="btn ghost block" onClick={() => setSheet({ t: 'nueva' })}><IcPlus />Nueva actividad</button>
+      {puede(usuario, 'actividades.crear', ev.id) && <button className="btn ghost block" onClick={() => setSheet({ t: 'nueva' })}><IcPlus />Nueva actividad</button>}
       {sheet?.t === 'nueva' && <ActividadSheet ev={ev} onClose={() => setSheet(null)} />}
       {sheet?.t === 'mov' && <MovimientoSheet ev={ev} actividadId={sheet.id} tipo={sheet.tipo} onClose={() => setSheet(null)} />}
     </div>

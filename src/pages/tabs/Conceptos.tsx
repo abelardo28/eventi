@@ -4,12 +4,13 @@ import { useStore } from '../../data/store'
 import { cargo, composicion, esperado, money, pagado, pct, plan, plural } from '../../domain/calc'
 import { fCorta } from '../../domain/fechas'
 import type { Evento } from '../../domain/types'
+import { puede } from '../../domain/permisos'
 import { IcPlus } from '../../ui/icons'
 import { Avatar, Bar } from '../../ui/kit'
 import { ConceptoSheet } from '../../sheets/ConceptoSheet'
 
 export function TabConceptos({ ev }: { ev: Evento }) {
-  const { hoy } = useStore()
+  const { hoy, usuario } = useStore()
   const [nuevo, setNuevo] = useState(false)
 
   return (
@@ -62,7 +63,7 @@ export function TabConceptos({ ev }: { ev: Evento }) {
         )
       })}
       {!ev.conceptos.length && <div className="glass panel empty">Este evento no tiene conceptos todavía.</div>}
-      <button className="btn ghost block" onClick={() => setNuevo(true)}><IcPlus />Agregar concepto</button>
+      {puede(usuario, 'conceptos.gestionar', ev.id) && <button className="btn ghost block" onClick={() => setNuevo(true)}><IcPlus />Agregar concepto</button>}
       {nuevo && <ConceptoSheet ev={ev} onClose={() => setNuevo(false)} />}
     </div>
   )

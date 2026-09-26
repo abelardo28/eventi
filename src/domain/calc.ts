@@ -1,4 +1,4 @@
-import type { Actividad, Cargo, Concepto, Evento, ISODate, Persona } from './types'
+import type { Abono, Actividad, Cargo, Concepto, Evento, ISODate, Persona } from './types'
 import { addDays } from './fechas'
 
 export const money = (n: number) => '$' + Math.round(n).toLocaleString('es-MX')
@@ -41,8 +41,13 @@ export const totalPersona = (p: Persona) => p.cargos.reduce((s, g) => s + g.mont
 export const esperado = (ev: Evento, cid?: string) =>
   ev.personas.reduce((s, p) => s + (cid ? cargo(p, cid)?.monto ?? 0 : totalPersona(p)), 0)
 
+/** Solo cuentan los abonos validados; los que subió un participante esperan revisión. */
+export const cuenta = (a: Abono) => (a.estado ?? 'validado') === 'validado'
+
 export const pagado = (ev: Evento, pid?: string | null, cid?: string | null) =>
-  ev.abonos.filter(a => (!pid || a.personaId === pid) && (!cid || a.conceptoId === cid)).reduce((s, a) => s + a.monto, 0)
+  ev.abonos.filter(a => cuenta(a) && (!pid || a.personaId === pid) && (!cid || a.conceptoId === cid)).reduce((s, a) => s + a.monto, 0)
+
+export const porValidar = (ev: Evento) => ev.abonos.filter(a => a.estado === 'pendiente')
 
 const debidoCargo = (c: Concepto, g: Cargo, hoy: ISODate) =>
   plan(c, g.monto).filter(q => q.fecha <= hoy).reduce((s, q) => s + q.monto, 0)

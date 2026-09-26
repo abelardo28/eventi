@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../data/store'
-import { vencido } from '../domain/calc'
+import { porValidar, vencido } from '../domain/calc'
+import { puede } from '../domain/permisos'
 import { diasEntre, fCorta } from '../domain/fechas'
 import { Topbar } from '../ui/kit'
 import { NoEncontrado } from './NoEncontrado'
@@ -21,10 +22,10 @@ type Tab = (typeof TABS)[number][0]
 
 export function Evento() {
   const { id, tab = 'resumen' } = useParams()
-  const { evento, hoy } = useStore()
+  const { evento, hoy, usuario } = useStore()
   const nav = useNavigate()
   const ev = evento(id)
-  if (!ev) return <NoEncontrado />
+  if (!ev || !puede(usuario, 'evento.ver', ev.id)) return <NoEncontrado />
   const actual = (TABS.some(t => t[0] === tab) ? tab : 'resumen') as Tab
   const atraso = ev.personas.some(p => vencido(ev, hoy, p.id) > 0)
   const dias = diasEntre(hoy, ev.fecha)
@@ -41,7 +42,7 @@ export function Evento() {
       <nav className="tabs glass" role="tablist">
         {TABS.map(([k, l]) => (
           <button key={k} className="tab" role="tab" aria-selected={actual === k} onClick={() => nav(`/e/${ev.id}/${k}`, { replace: true })}>
-            {l}{k === 'personas' && atraso && <span className="dot" aria-label="con atrasos" />}
+            {l}{k === 'personas' && atraso && <span className="dot" aria-label="con atrasos" />}{k === 'resumen' && porValidar(ev).length > 0 && <span className="dot" style={{ background: 'var(--accent)' }} aria-label="abonos por validar" />}
           </button>
         ))}
       </nav>

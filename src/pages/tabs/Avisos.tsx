@@ -4,11 +4,13 @@ import { cola, concepto, money, type Aviso } from '../../domain/calc'
 import { fCorta } from '../../domain/fechas'
 import { enlaceWhatsApp, mensajeRecordatorio } from '../../domain/mensajes'
 import type { ConfigRecordatorios, Evento } from '../../domain/types'
+import { puede } from '../../domain/permisos'
 import { IcBell, IcWa } from '../../ui/icons'
 import { DateBadge, Stepper, Toggle } from '../../ui/kit'
 
 export function TabAvisos({ ev }: { ev: Evento }) {
-  const { hoy, editarEvento } = useStore()
+  const { hoy, editarEvento, usuario } = useStore()
+  const config = puede(usuario, 'avisos.configurar', ev.id), enviar = puede(usuario, 'avisos.enviar', ev.id)
   const r = ev.recordatorios
   const set = (patch: Partial<ConfigRecordatorios>) => editarEvento(ev.id, e => { Object.assign(e.recordatorios, patch) })
   const c = cola(ev, hoy)
@@ -19,8 +21,8 @@ export function TabAvisos({ ev }: { ev: Evento }) {
 
   return (
     <div className="stack-lg">
-      <section className="glass panel stack">
-        <h2>Configuración</h2>
+      <section className="glass panel stack" style={config ? undefined : { opacity: .6, pointerEvents: 'none' }} aria-disabled={!config}>
+        <div className="between"><h2>Configuración</h2>{!config && <span className="small muted">Solo el administrador</span>}</div>
         <div className="between"><span>Días de aviso antes de cada pago</span><Stepper label="días" min={1} max={15} value={r.diasAntes} onChange={v => set({ diasAntes: v })} /></div>
         <div className="between"><span>Hora de envío</span><input className="inp" type="time" id="hora" value={r.hora} onChange={e => set({ hora: e.target.value || '09:00' })} style={{ width: 'auto' }} /></div>
         <div className="between"><span className="row" style={{ gap: 8 }}><span className="ch wa"><IcWa size={12} />WhatsApp</span><span className="small muted">a su número</span></span><Toggle id="t-wa" checked={r.whatsapp} onChange={v => set({ whatsapp: v })} label="WhatsApp" /></div>
@@ -50,7 +52,7 @@ export function TabAvisos({ ev }: { ev: Evento }) {
                   <div className="sub">{x.c.nombre} · {money(x.s.monto)} · {x.tipo === 'vencido' ? <span className="neg">vencido</span> : `vence ${fCorta(x.s.fecha)}`}</div>
                   {!x.p.telefono && <div className="sub faint">Sin número de WhatsApp</div>}
                 </span>
-                {link
+                {link && enviar
                   ? <a className={`btn sm ${esHoy && !yaHoy ? 'wa' : 'ghost'}`} href={link} target="_blank" rel="noreferrer" onClick={() => marcar(x)}>{yaHoy ? 'Enviado' : 'Enviar'}</a>
                   : <span />}
               </div>

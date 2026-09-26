@@ -1,36 +1,40 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../data/store'
-import { esperado, money, pagado, pct, plural, vencido } from '../domain/calc'
+import { esperado, money, pagado, pct, plural, porValidar, vencido } from '../domain/calc'
+import { eventosVisibles, puede } from '../domain/permisos'
 import { fCompleta, fLarga } from '../domain/fechas'
 import { IcPlus } from '../ui/icons'
 import { Bar, Topbar } from '../ui/kit'
 import { EventoSheet } from '../sheets/EventoSheet'
 
 export function Home() {
-  const { db, hoy, restablecer } = useStore()
+  const { db, hoy, usuario } = useStore()
   const nav = useNavigate()
   const [nuevo, setNuevo] = useState(false)
-  const [confirmar, setConfirmar] = useState(false)
+  const eventos = eventosVisibles(db.eventos, usuario!)
+  const crear = puede(usuario, 'evento.crear')
 
   return (
     <>
       <Topbar />
       <section className="hello">
         <div><div className="eyebrow">{fLarga(hoy)}</div><h1>Tus eventos</h1></div>
-        <button className="btn" onClick={() => setNuevo(true)}><IcPlus />Nuevo evento</button>
+        {crear && <button className="btn" onClick={() => setNuevo(true)}><IcPlus />Nuevo evento</button>}
       </section>
 
       <div className="stack">
-        {db.eventos.length === 0 && (
+        {eventos.length === 0 && (
           <div className="glass panel empty">
-            <span>Aún no tienes eventos. Crea el primero para empezar a registrar pagos.</span>
-            <button className="btn" onClick={() => setNuevo(true)}><IcPlus />Crear evento</button>
+            {crear
+              ? <><span>Aún no tienes eventos. Crea el primero para empezar a registrar pagos.</span><button className="btn" onClick={() => setNuevo(true)}><IcPlus />Crear evento</button></>
+              : <span>Todavía no tienes eventos asignados. Pide al administrador que te dé acceso.</span>}
           </div>
         )}
-        {db.eventos.map(ev => {
+        {eventos.map(ev => {
           const esp = esperado(ev), pag = pagado(ev)
           const atras = ev.personas.filter(p => vencido(ev, hoy, p.id) > 0).length
+          const pend = porValidar(ev).length
           return (
             <button key={ev.id} className="evcard glass" onClick={() => nav(`/e/${ev.id}`)}>
               <div className="between" style={{ alignItems: 'flex-start' }}>
@@ -44,7 +48,10 @@ export function Home() {
               <div style={{ margin: '16px 0 10px' }}><Bar value={pct(pag, esp)} /></div>
               <div className="between small wrap">
                 <span className="num"><b>{money(pag)}</b> <span className="muted">de {money(esp)}</span></span>
-                {atras ? <span className="pill bad">{atras} con atraso</span> : <span className="pill ok">Al corriente</span>}
+                <span className="row" style={{ gap: 6 }}>
+                  {pend > 0 && <span className="pill warn">{pend} por validar</span>}
+                  {atras ? <span className="pill bad">{atras} con atraso</span> : <span className="pill ok">Al corriente</span>}
+                </span>
               </div>
             </button>
           )
@@ -52,10 +59,7 @@ export function Home() {
       </div>
 
       <div className="footnote">
-        Por ahora los datos se guardan solo en este dispositivo.{' '}
-        {confirmar
-          ? <><button className="linkbtn small danger" onClick={() => { restablecer(); setConfirmar(false) }}>Sí, borrar todo y cargar el ejemplo</button> · <button className="linkbtn small" onClick={() => setConfirmar(false)}>Cancelar</button></>
-          : <button className="linkbtn small" onClick={() => setConfirmar(true)}>Restablecer datos de ejemplo</button>}
+        Por ahora los datos se guardan solo en este dispositivo.
       </div>
 
       {nuevo && <EventoSheet onClose={() => setNuevo(false)} />}
