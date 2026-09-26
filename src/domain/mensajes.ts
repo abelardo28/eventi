@@ -1,12 +1,49 @@
-import type { Concepto, Evento, Persona } from './types'
+import type { Concepto, Evento, Persona, Plantillas } from './types'
 import { money, saludo, type Siguiente } from './calc'
 import { fCorta } from './fechas'
 
+export const PLANTILLAS: Plantillas = {
+  whatsappProximo: 'Hola {nombre}, te recordamos que el {fecha} vence tu pago de {concepto} para {evento}: {monto}.\nPuedes subir tu comprobante en Eventi.',
+  whatsappVencido: 'Hola {nombre}, tu pago de {concepto} para {evento} venció el {fecha}. Saldo pendiente: {monto}.\nPuedes subir tu comprobante en Eventi.',
+  pushTitulo: '{evento}: pago de {concepto}',
+  pushTexto: '{monto} {estado}. Toca para subir tu comprobante.',
+}
+
+export const VARIABLES = [
+  { clave: 'nombre', descripcion: 'Nombre o familia' },
+  { clave: 'concepto', descripcion: 'Concepto' },
+  { clave: 'monto', descripcion: 'Monto del pago' },
+  { clave: 'fecha', descripcion: 'Fecha límite' },
+  { clave: 'estado', descripcion: '“vence el…” o “venció el…”' },
+  { clave: 'evento', descripcion: 'Evento' },
+] as const
+
+export const plantillas = (ev: Evento): Plantillas => ({ ...PLANTILLAS, ...ev.recordatorios.plantillas })
+
+export function variables(ev: Evento, p: Persona, c: Concepto, s: Siguiente): Record<string, string> {
+  const fecha = fCorta(s.fecha)
+  return {
+    nombre: saludo(p), concepto: c.nombre, monto: money(s.monto), fecha, evento: ev.nombre,
+    estado: s.vencida ? `venció el ${fecha}` : `vence el ${fecha}`,
+  }
+}
+
+/** Sustituye {variable}; las llaves desconocidas se dejan tal cual para que se note el error. */
+export const rellenar = (texto: string, vars: Record<string, string>) =>
+  texto.replace(/\{(\w+)\}/g, (m, k: string) => vars[k.toLowerCase()] ?? m)
+
+/** Variables escritas en el texto que no existen (p. ej. {nombr}). */
+export const variablesDesconocidas = (texto: string) =>
+  [...texto.matchAll(/\{(\w+)\}/g)].map(m => m[1]).filter(k => !VARIABLES.some(v => v.clave === k.toLowerCase()))
+
 export function mensajeRecordatorio(ev: Evento, p: Persona, c: Concepto, s: Siguiente): string {
-  const quien = saludo(p)
-  return s.vencida
-    ? `Hola ${quien}, tu pago de ${c.nombre} para ${ev.nombre} venció el ${fCorta(s.fecha)}. Saldo pendiente: ${money(s.monto)}.\nPuedes subir tu comprobante en Eventi.`
-    : `Hola ${quien}, te recordamos que el ${fCorta(s.fecha)} vence tu pago de ${c.nombre} para ${ev.nombre}: ${money(s.monto)}.\nPuedes subir tu comprobante en Eventi.`
+  const t = plantillas(ev)
+  return rellenar(s.vencida ? t.whatsappVencido : t.whatsappProximo, variables(ev, p, c, s))
+}
+
+export function notificacionPush(ev: Evento, p: Persona, c: Concepto, s: Siguiente): { titulo: string; texto: string } {
+  const t = plantillas(ev), v = variables(ev, p, c, s)
+  return { titulo: rellenar(t.pushTitulo, v), texto: rellenar(t.pushTexto, v) }
 }
 
 /** Deja solo dígitos; si son 10 (número mexicano sin lada internacional) antepone 52. */

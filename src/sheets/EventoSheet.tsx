@@ -2,19 +2,28 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../data/store'
 import { uid } from '../data/uid'
-import { repartirPct } from '../domain/calc'
-import { addMonths, mesesHasta } from '../domain/fechas'
-import type { Concepto, Evento } from '../domain/types'
+import { money, plural } from '../domain/calc'
+import { aConcepto, cuotasMensuales, problemaConcepto, type BorradorConcepto } from '../domain/conceptos'
+import { addDays, addMonths, mesesHasta } from '../domain/fechas'
+import type { Evento } from '../domain/types'
+import { IcEdit, IcPlus, IcTrash } from '../ui/icons'
 import { Sheet, useToast } from '../ui/overlay'
+import { ConceptoCampos } from './ConceptoSheet'
+import { PLANTILLAS } from '../domain/mensajes'
 
-interface Base { nombre: string; on: boolean; adulto: number; menor: number | null }
-const INICIALES: Base[] = [
-  { nombre: 'Inscripción', on: true, adulto: 800, menor: null },
-  { nombre: 'Hospedaje', on: true, adulto: 2500, menor: 1500 },
-  { nombre: 'Transporte', on: true, adulto: 1200, menor: 800 },
-  { nombre: 'Uniformes', on: true, adulto: 950, menor: null },
-  { nombre: 'Alimentos', on: false, adulto: 600, menor: 400 },
-]
+type Fila = BorradorConcepto & { key: string }
+
+/** Conceptos sugeridos; se pueden editar o quitar antes de crear el evento. */
+function sugeridos(hoy: string, fecha: string): Fila[] {
+  const meses = mesesHasta(hoy, fecha)
+  const pagos = (n: number) => cuotasMensuales(meses[0] ?? addDays(hoy, 15), Math.min(n, Math.max(1, meses.length)))
+  return [
+    { key: uid('k'), nombre: 'Inscripción', porEdad: false, adulto: 800, menor: 0, cuotas: pagos(1) },
+    { key: uid('k'), nombre: 'Hospedaje', porEdad: true, adulto: 2500, menor: 1500, cuotas: pagos(meses.length) },
+    { key: uid('k'), nombre: 'Transporte', porEdad: true, adulto: 1200, menor: 800, cuotas: pagos(meses.length) },
+    { key: uid('k'), nombre: 'Uniformes', porEdad: false, adulto: 950, menor: 0, cuotas: pagos(1) },
+  ]
+}
 
 export function EventoSheet({ onClose }: { onClose: () => void }) {
   const { hoy, agregarEvento } = useStore()
@@ -23,25 +32,28 @@ export function EventoSheet({ onClose }: { onClose: () => void }) {
   const [nombre, setNombre] = useState('')
   const [fecha, setFecha] = useState(addMonths(hoy, 2))
   const [lugar, setLugar] = useState('')
-  const [conceptos, setConceptos] = useState(INICIALES)
-  const set = (i: number, c: Partial<Base>) => setConceptos(xs => xs.map((x, j) => (j === i ? { ...x, ...c } : x)))
+  const [filas, setFilas] = useState<Fila[]>(() => sugeridos(hoy, addMonths(hoy, 2)))
+  const [abierta, setAbierta] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const cambiar = (key: string, b: BorradorConcepto) => { setFilas(xs => xs.map(x => (x.key === key ? { ...b, key } : x))); setError(null) }
+  const quitar = (key: string) => { setFilas(xs => xs.filter(x => x.key !== key)); if (abierta === key) setAbierta(null) }
+  const agregar = () => {
+    const key = uid('k')
+    setFilas(xs => [...xs, { key, nombre: '', porEdad: false, adulto: 0, menor: 0, cuotas: cuotasMensuales(addDays(hoy, 15), 1) }])
+    setAbierta(key)
+  }
 
   const crear = () => {
-    if (!nombre.trim()) { toast('Ponle nombre al evento'); return }
-    const meses = mesesHasta(hoy, fecha)
-    const cs: Concepto[] = conceptos.filter(c => c.on && c.adulto > 0).map(c => {
-      const n = c.adulto >= 1000 ? meses.length : 1
-      const pcts = repartirPct(n)
-      return {
-        id: uid('c'), nombre: c.nombre, base: c.adulto,
-        tarifa: c.menor != null ? { adulto: c.adulto, menor: c.menor } : null,
-        cuotas: meses.slice(0, n).map((f, j) => ({ fecha: f, pct: pcts[j] })),
-      }
-    })
+    if (!nombre.trim()) { setError('Ponle nombre al evento'); return }
+    for (const f of filas) {
+      const p = problemaConcepto(f, filas.filter(x => x.key !== f.key).map(x => x.nombre))
+      if (p) { setError(p); setAbierta(f.key); return }
+    }
     const ev: Evento = {
       id: uid('e'), nombre: nombre.trim(), fecha, lugar: lugar.trim() || 'Por definir',
-      conceptos: cs, personas: [], abonos: [], actividades: [], envios: [],
-      recordatorios: { diasAntes: 3, hora: '09:00', whatsapp: true, push: false, repetirVencidos: true, cadaDias: 3 },
+      conceptos: filas.map(f => aConcepto(f, uid('c'))), personas: [], abonos: [], actividades: [], envios: [],
+      recordatorios: { diasAntes: 3, hora: '09:00', whatsapp: true, push: false, repetirVencidos: true, cadaDias: 3, plantillas: { ...PLANTILLAS } },
     }
     agregarEvento(ev)
     onClose()
@@ -51,25 +63,42 @@ export function EventoSheet({ onClose }: { onClose: () => void }) {
 
   return (
     <Sheet title="Nuevo evento" onClose={onClose} onSubmit={crear}>
-      <label className="f">Nombre del evento<input className="inp" id="ne-n" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej. Torneo Beisbol Veteranos" autoFocus /></label>
+      <label className="f">Nombre del evento<input className="inp" id="ne-n" value={nombre} onChange={e => { setNombre(e.target.value); setError(null) }} placeholder="Ej. Torneo Beisbol Veteranos" autoFocus /></label>
       <div className="grid2">
         <label className="f">Fecha<input className="inp" id="ne-f" type="date" value={fecha} min={hoy} onChange={e => setFecha(e.target.value || fecha)} /></label>
         <label className="f">Lugar<input className="inp" id="ne-l" value={lugar} onChange={e => setLugar(e.target.value)} placeholder="Ciudad o sede" /></label>
       </div>
       <div className="stack" style={{ gap: 8 }}>
-        <span className="f">Conceptos y tarifas</span>
-        {conceptos.map((c, i) => (
-          <div key={c.nombre} className="row" style={{ gap: 6 }}>
-            <button type="button" className="chip" aria-pressed={c.on} onClick={() => set(i, { on: !c.on })} style={{ flex: 1, textAlign: 'left' }}>{c.nombre}</button>
-            <input className="inp num" style={{ width: 96 }} type="number" inputMode="numeric" id={`ne-a${i}`} value={c.adulto}
-              aria-label={`${c.menor != null ? 'Tarifa adulto' : 'Monto por persona'} de ${c.nombre}`} onChange={e => set(i, { adulto: +e.target.value })} />
-            {c.menor != null
-              ? <input className="inp num" style={{ width: 86 }} type="number" inputMode="numeric" id={`ne-m${i}`} value={c.menor} aria-label={`Tarifa menor de ${c.nombre}`} onChange={e => set(i, { menor: +e.target.value })} />
-              : <span style={{ width: 86 }} />}
-          </div>
-        ))}
-        <div className="small muted">Con dos montos: adulto y menor. Los pagos se reparten cada mes hasta el evento; puedes agregar más conceptos después.</div>
+        <div className="titlerow" style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>Conceptos<span className="badge">{filas.length}</span></div>
+        {filas.map((f, i) => abierta === f.key
+          ? (
+            <div key={f.key} className="concepto-edit stack" style={{ gap: 10 }}>
+              <ConceptoCampos b={f} onChange={b => cambiar(f.key, b)} idp={`ne-c${i}`} />
+              <div className="row">
+                <button type="button" className="btn sm" onClick={() => {
+                  const p = problemaConcepto(f, filas.filter(x => x.key !== f.key).map(x => x.nombre))
+                  if (p) setError(p); else { setAbierta(null); setError(null) }
+                }}>Listo</button>
+                <button type="button" className="btn sm ghost" onClick={() => quitar(f.key)}><IcTrash />Quitar</button>
+              </div>
+            </div>
+          )
+          : (
+            <div key={f.key} className="concepto-fila">
+              <span>
+                <b>{f.nombre || 'Sin nombre'}</b>
+                <div className="small muted num">
+                  {f.porEdad ? `${money(f.adulto)} adulto · ${money(f.menor)} menor` : `${money(f.adulto)} por persona`} · {plural(f.cuotas.length, 'pago', 'pagos')}
+                </div>
+              </span>
+              <button type="button" className="iconbtn" aria-label={`Editar ${f.nombre || 'concepto'}`} onClick={() => setAbierta(f.key)}><IcEdit size={16} /></button>
+              <button type="button" className="iconbtn" aria-label={`Quitar ${f.nombre || 'concepto'}`} onClick={() => quitar(f.key)}><IcTrash size={16} /></button>
+            </div>
+          ))}
+        {!filas.length && <div className="small muted">Sin conceptos. Puedes agregarlos ahora o después.</div>}
+        <button type="button" className="btn sm ghost" style={{ alignSelf: 'flex-start' }} onClick={agregar}><IcPlus />Agregar concepto</button>
       </div>
+      {error && <div className="small neg" role="alert">{error}</div>}
       <button className="btn block" type="submit">Crear evento</button>
     </Sheet>
   )

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../data/store'
 import { porValidar, vencido } from '../domain/calc'
@@ -10,6 +11,8 @@ import { TabPersonas } from './tabs/Personas'
 import { TabConceptos } from './tabs/Conceptos'
 import { TabActividades } from './tabs/Actividades'
 import { TabAvisos } from './tabs/Avisos'
+import { ImportarSheet } from '../sheets/ImportarSheet'
+import { IcUpload } from '../ui/icons'
 
 const TABS = [
   ['resumen', 'Resumen'],
@@ -24,6 +27,7 @@ export function Evento() {
   const { id, tab = 'resumen' } = useParams()
   const { evento, hoy, usuario } = useStore()
   const nav = useNavigate()
+  const [importar, setImportar] = useState(false)
   const ev = evento(id)
   if (!ev || !puede(usuario, 'evento.ver', ev.id)) return <NoEncontrado />
   const actual = (TABS.some(t => t[0] === tab) ? tab : 'resumen') as Tab
@@ -38,11 +42,14 @@ export function Evento() {
         <div className="meta">
           {fCorta(ev.fecha)}{ev.fin ? ` – ${fCorta(ev.fin)}` : ''} · {ev.lugar} · {dias > 0 ? `faltan ${dias} días` : dias === 0 ? 'es hoy' : 'ya pasó'}
         </div>
+        {puede(usuario, 'datos.importar', ev.id) && (
+          <div className="evacc"><button className="btn sm ghost" onClick={() => setImportar(true)}><IcUpload />Importar Excel</button></div>
+        )}
       </section>
       <nav className="tabs glass" role="tablist">
         {TABS.map(([k, l]) => (
           <button key={k} className="tab" role="tab" aria-selected={actual === k} onClick={() => nav(`/e/${ev.id}/${k}`, { replace: true })}>
-            {l}{k === 'personas' && atraso && <span className="dot" aria-label="con atrasos" />}{k === 'resumen' && porValidar(ev).length > 0 && <span className="dot" style={{ background: 'var(--accent)' }} aria-label="abonos por validar" />}
+            {l}{k === 'personas' && <span className="badge">{ev.personas.length}</span>}{k === 'personas' && atraso && <span className="dot" aria-label="con atrasos" />}{k === 'resumen' && porValidar(ev).length > 0 && <span className="dot" style={{ background: 'var(--accent)' }} aria-label="abonos por validar" />}
           </button>
         ))}
       </nav>
@@ -51,6 +58,7 @@ export function Evento() {
       {actual === 'conceptos' && <TabConceptos ev={ev} />}
       {actual === 'actividades' && <TabActividades ev={ev} />}
       {actual === 'avisos' && <TabAvisos ev={ev} />}
+      {importar && <ImportarSheet ev={ev} onClose={() => setImportar(false)} />}
     </>
   )
 }

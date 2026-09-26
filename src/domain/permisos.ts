@@ -27,13 +27,14 @@ export type Accion =
   | 'avisos.configurar'
   | 'avisos.enviar'
   | 'datos.restablecer'
+  | 'datos.importar'
 
 const TABLA: Record<Rol, readonly Accion[]> = {
   admin: [
     'usuarios.gestionar', 'evento.crear', 'evento.editar', 'evento.borrar', 'evento.ver',
     'conceptos.gestionar', 'personas.gestionar', 'personas.borrar', 'personas.vincular',
     'abonos.registrar', 'abonos.validar', 'abonos.borrar', 'abonos.proponer',
-    'actividades.crear', 'actividades.movimientos', 'avisos.configurar', 'avisos.enviar', 'datos.restablecer',
+    'actividades.crear', 'actividades.movimientos', 'avisos.configurar', 'avisos.enviar', 'datos.restablecer', 'datos.importar',
   ],
   capturista: [
     'evento.ver', 'personas.gestionar', 'abonos.registrar', 'abonos.validar',

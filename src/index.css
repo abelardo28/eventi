@@ -235,3 +235,21 @@ a.btn{text-decoration:none}
 .rolopt .dotsel{width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--faint);margin-top:2px}
 .rolopt[aria-pressed="true"] .dotsel{box-shadow:inset 0 0 0 5px var(--ink)}
 .pend{border-radius:18px;padding:12px;box-shadow:inset 0 0 0 1.5px var(--accent);display:flex;flex-direction:column;gap:10px}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:99px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;background:var(--track);color:var(--ink);vertical-align:middle;line-height:1}
+.tab[aria-selected="true"] .badge{background:rgba(255,255,255,.22);color:var(--on-btn)}
+h1 .badge,h2 .badge{font-family:var(--body);letter-spacing:0}
+.titlerow{display:flex;align-items:center;gap:8px}
+textarea.inp{resize:vertical;line-height:1.45;min-height:64px}
+.chip.var{padding:6px 11px;font-size:12.5px}
+.pushcard{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:start;background:var(--glass-strong);border-radius:16px;padding:11px 12px;font-size:13.5px;box-shadow:0 6px 20px rgba(0,0,0,.06)}
+.pushcard b{display:block;font-size:13.5px}
+.pushcard .t{font-size:11px;color:var(--faint)}
+.pushicon{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:700;background:linear-gradient(135deg,#ff8a3d,#ff4f8b)}
+.concepto-fila{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:8px 10px;border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);background:var(--glass-strong)}
+.concepto-fila .iconbtn{width:34px;height:34px}
+.concepto-edit{padding:12px;border-radius:16px;box-shadow:inset 0 0 0 1.5px var(--accent);background:var(--glass-strong)}
+.impgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.impgrid span{background:var(--glass-strong);box-shadow:inset 0 0 0 1px var(--line);border-radius:14px;padding:9px 11px;font-size:12.5px;color:var(--muted)}
+.impgrid b{display:block;font-size:20px;color:var(--ink);font-weight:600}
+.implist{margin:6px 0 0;padding-left:18px;font-size:12.5px;display:grid;gap:4px;max-height:220px;overflow:auto}
+.evacc{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}

@@ -18,6 +18,10 @@ export function TabPersonas({ ev }: { ev: Evento }) {
 
   return (
     <div className="stack">
+      <div className="between">
+        <h2 className="titlerow">Personas registradas<span className="badge">{ev.personas.length}</span></h2>
+        <span className="small muted">{ev.personas.filter(p => p.tipo === 'Familia').length} familias</span>
+      </div>
       <div className="row">
         <input className="inp" id="buscar" type="search" placeholder="Buscar persona o familia" value={q} onChange={e => setQ(e.target.value)} style={{ flex: 1 }} />
         {puede(usuario, 'personas.gestionar', ev.id) && <button className="btn" onClick={() => setSheet('persona')}><IcPlus />Agregar</button>}

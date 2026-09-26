@@ -27,8 +27,8 @@ export function Usuarios() {
         <button className="btn" onClick={() => setSheet({})}><IcPlus />Nuevo usuario</button>
       </section>
       <nav className="tabs glass" role="tablist">
-        <button className="tab" role="tab" aria-selected={filtro === 'todos'} onClick={() => setFiltro('todos')}>Todos {db.usuarios.length}</button>
-        {ORDEN.map(r => <button key={r} className="tab" role="tab" aria-selected={filtro === r} onClick={() => setFiltro(r)}>{ROLES[r].nombre} {cuenta(r)}</button>)}
+        <button className="tab" role="tab" aria-selected={filtro === 'todos'} onClick={() => setFiltro('todos')}>Todos<span className="badge">{db.usuarios.length}</span></button>
+        {ORDEN.map(r => <button key={r} className="tab" role="tab" aria-selected={filtro === r} onClick={() => setFiltro(r)}>{ROLES[r].nombre}<span className="badge">{cuenta(r)}</span></button>)}
       </nav>
       <section className="glass panel" style={{ paddingBlock: 6 }}>
         <div className="list">

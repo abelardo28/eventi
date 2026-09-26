@@ -90,6 +90,16 @@ export interface ConfigRecordatorios {
   push: boolean
   repetirVencidos: boolean
   cadaDias: number
+  /** Textos de los mensajes; si falta alguno se usa el de `PLANTILLAS`. */
+  plantillas?: Partial<Plantillas>
+}
+
+/** Textos con variables entre llaves: {nombre}, {evento}, {concepto}, {monto}, {fecha}, {estado}. */
+export interface Plantillas {
+  whatsappProximo: string
+  whatsappVencido: string
+  pushTitulo: string
+  pushTexto: string
 }
 
 export type Canal = 'WhatsApp' | 'Push'

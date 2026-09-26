@@ -3,15 +3,16 @@ import { Link } from 'react-router-dom'
 import { useStore } from '../../data/store'
 import { cargo, composicion, esperado, money, pagado, pct, plan, plural } from '../../domain/calc'
 import { fCorta } from '../../domain/fechas'
-import type { Evento } from '../../domain/types'
+import type { Concepto, Evento } from '../../domain/types'
 import { puede } from '../../domain/permisos'
-import { IcPlus } from '../../ui/icons'
+import { IcEdit, IcPlus } from '../../ui/icons'
 import { Avatar, Bar } from '../../ui/kit'
 import { ConceptoSheet } from '../../sheets/ConceptoSheet'
 
 export function TabConceptos({ ev }: { ev: Evento }) {
   const { hoy, usuario } = useStore()
-  const [nuevo, setNuevo] = useState(false)
+  const [sheet, setSheet] = useState<{ c?: Concepto } | null>(null)
+  const gestiona = puede(usuario, 'conceptos.gestionar', ev.id)
 
   return (
     <div className="stack">
@@ -24,7 +25,10 @@ export function TabConceptos({ ev }: { ev: Evento }) {
             <div className="between" style={{ alignItems: 'flex-start' }}>
               <div><h2>{c.nombre}</h2>
                 <div className="small muted num">{c.tarifa ? `${money(c.tarifa.adulto)} por adulto · ${money(c.tarifa.menor)} por menor` : `${money(c.base)} por persona`}</div></div>
-              <div className="bigpct num" style={{ fontSize: 30 }}>{pct(p, e)}<small>%</small></div>
+              <div className="row" style={{ gap: 8 }}>
+                <div className="bigpct num" style={{ fontSize: 30 }}>{pct(p, e)}<small>%</small></div>
+                {gestiona && <button className="iconbtn" aria-label={`Editar ${c.nombre}`} onClick={() => setSheet({ c })}><IcEdit size={16} /></button>}
+              </div>
             </div>
             <Bar value={pct(p, e)} />
             <div className="small muted num">
@@ -63,8 +67,8 @@ export function TabConceptos({ ev }: { ev: Evento }) {
         )
       })}
       {!ev.conceptos.length && <div className="glass panel empty">Este evento no tiene conceptos todavía.</div>}
-      {puede(usuario, 'conceptos.gestionar', ev.id) && <button className="btn ghost block" onClick={() => setNuevo(true)}><IcPlus />Agregar concepto</button>}
-      {nuevo && <ConceptoSheet ev={ev} onClose={() => setNuevo(false)} />}
+      {gestiona && <button className="btn ghost block" onClick={() => setSheet({})}><IcPlus />Agregar concepto</button>}
+      {sheet && <ConceptoSheet key={sheet.c?.id ?? 'nuevo'} ev={ev} concepto={sheet.c} onClose={() => setSheet(null)} />}
     </div>
   )
 }

@@ -4,12 +4,13 @@ App web (adaptada al celular e instalable como PWA) para organizar eventos y lle
 
 ## Qué hace hoy
 
-- Eventos con conceptos (Inscripción, Hospedaje, Transporte…) y fechas de pago por porcentaje.
+- Eventos con conceptos (Inscripción, Hospedaje, Transporte…) y fechas de pago por porcentaje. Los conceptos se agregan, editan y quitan al crear el evento y después (solo el administrador); al cambiar un monto se puede recalcular a quienes pagan por tarifa sin tocar los montos ajustados a mano. Un concepto con abonos no se puede borrar.
 - Cada persona o familia tiene **sus propios conceptos y montos**. Los conceptos con tarifa se calculan por adulto y menor (2 adultos + 2 menores de hospedaje a $2,500 / $1,500 = $8,000) y el monto se puede ajustar a mano.
 - Avance general, por concepto y por persona, con lo vencido y lo que debería llevarse a la fecha.
 - Abonos con forma de pago y comprobante (foto o PDF; las fotos se reducen antes de guardarse).
 - Actividades con movimientos de gasto e ingreso y su ganancia.
-- Recordatorios: configuración de días de aviso, cola de envíos y botón que abre WhatsApp con el mensaje listo (`wa.me`).
+- Recordatorios: configuración de días de aviso, cola de envíos y botón que abre WhatsApp con el mensaje listo (`wa.me`). Los textos de WhatsApp (próximo y vencido) y de la notificación push se editan por evento con variables `{nombre}`, `{concepto}`, `{monto}`, `{fecha}`, `{estado}`, `{evento}` y vista previa en vivo.
+- **Importar desde Excel** (.xlsx, administrador): hojas *Conceptos*, *Personas* (una columna por concepto con el monto que le toca), *Pagos* y *Gastos*. Reconoce encabezados comunes, muestra una vista previa con las filas que no entendió y no duplica si se importa el mismo archivo otra vez. Hay una plantilla descargable.
 
 - **Cuentas y roles:** iniciar sesión, registrarse y gestión de usuarios.
   - *Administrador:* todo, incluidos usuarios, eventos, conceptos y borrar registros.
