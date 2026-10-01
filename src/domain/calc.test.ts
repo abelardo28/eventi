@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Concepto, Evento, Persona } from './types'
-import { cola, debido, esperado, estadoPersona, pagado, plan, porTarifa, repartirPct, siguiente, vencido } from './calc'
+import { avancePago, cola, debido, esperado, estadoPersona, pagado, plan, porTarifa, repartirPct, siguiente, vencido } from './calc'
 import { enlaceWhatsApp, telefonoWhatsApp } from './mensajes'
 import { mesesHasta } from './fechas'
 
@@ -83,5 +83,16 @@ describe('recordatorios', () => {
     expect(telefonoWhatsApp('667 555 0101')).toBe('526675550101')
     expect(enlaceWhatsApp('+52 667 555 0101', 'Hola')).toBe('https://wa.me/526675550101?text=Hola')
     expect(enlaceWhatsApp('123', 'Hola')).toBeNull()
+  })
+})
+
+describe('avance por fecha de pago', () => {
+  it('aplica los abonos a los pagos más antiguos', () => {
+    // 8,000 en 34/33/33 → 2,700 · 2,650 · 2,650
+    const ev = evento([abono('f', 'hos', 3000)])
+    expect(avancePago(ev, familia, hospedaje, 0)).toEqual({ monto: 2700, cubierto: 2700, completo: true })
+    expect(avancePago(ev, familia, hospedaje, 1)).toEqual({ monto: 2650, cubierto: 300, completo: false })
+    expect(avancePago(ev, familia, hospedaje, 2)).toEqual({ monto: 2650, cubierto: 0, completo: false })
+    expect(avancePago(ev, familia, hospedaje, null)).toEqual({ monto: 8000, cubierto: 3000, completo: false })
   })
 })

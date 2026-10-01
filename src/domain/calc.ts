@@ -123,3 +123,19 @@ export const saludo = (p: Persona) => (/^familia\s/i.test(p.nombre) ? p.nombre :
 
 export const initials = (n: string) =>
   n.replace(/^Familia\s+/i, 'F ').split(/\s+/).slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase()
+
+/**
+ * Lo que le toca a una persona en un pago del concepto (índice de la cuota) o en el total (`null`),
+ * y cuánto de lo ya validado cubre ese pago. Los abonos se aplican en orden a los pagos más antiguos.
+ */
+export function avancePago(ev: Evento, p: Persona, c: Concepto, i: number | null): { monto: number; cubierto: number; completo: boolean } {
+  const g = cargo(p, c.id)
+  if (!g) return { monto: 0, cubierto: 0, completo: false }
+  const total = pagado(ev, p.id, c.id)
+  if (i === null) return { monto: g.monto, cubierto: Math.min(total, g.monto), completo: total >= g.monto }
+  const pl = plan(c, g.monto)
+  const antes = pl.slice(0, i).reduce((s, y) => s + y.monto, 0)
+  const monto = pl[i]?.monto ?? 0
+  const cubierto = Math.max(0, Math.min(monto, total - antes))
+  return { monto, cubierto, completo: cubierto >= monto }
+}
