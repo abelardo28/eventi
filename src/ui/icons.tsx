@@ -35,3 +35,6 @@ export function Logo({ size = 30 }: { size?: number }) {
     </svg>
   )
 }
+export const IcCheck = ({ size, ...p }: P) => <svg {...base(size)} {...stroke} {...p}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+export const IcAlert = ({ size, ...p }: P) => <svg {...base(size)} {...stroke} {...p}><path d="M12 8v5M12 16.5v.01" /><circle cx="12" cy="12" r="9" /></svg>
+export const IcClock = ({ size, ...p }: P) => <svg {...base(size)} {...stroke} {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>

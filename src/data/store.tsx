@@ -4,6 +4,7 @@ import { hoyISO } from '../domain/fechas'
 import { hashPassword, normalizarEmail, verificarPassword } from '../domain/auth'
 import { quedaAdmin } from '../domain/permisos'
 import { telefonoWhatsApp } from '../domain/mensajes'
+import { marcarLeidas } from '../domain/notificaciones'
 import { datosEjemplo } from './seed'
 import { repoLocal, type Repositorio } from './repo'
 import { uid } from './uid'
@@ -29,6 +30,8 @@ interface Store {
   crearUsuario: (datos: NuevoUsuario) => Promise<string | null>
   editarUsuario: (id: string, cambios: CambiosUsuario) => string | null
   cambiarPassword: (id: string, password: string, temporal?: boolean) => Promise<void>
+  /** Marca notificaciones del usuario actual como leídas. */
+  marcarLeidas: (ids: string[] | 'todas') => void
   error: string | null
   limpiarError: () => void
 }
@@ -135,6 +138,12 @@ export function StoreProvider({ children, repo = repoLocal }: { children: ReactN
     cambiarPassword: async (id, password, temporal = false) => {
       const { hash, salt } = await hashPassword(password)
       commit({ ...get(), usuarios: get().usuarios.map(u => (u.id === id ? { ...u, hash, salt, debeCambiarPassword: temporal } : u)) })
+    },
+    marcarLeidas: ids => {
+      if (!usuario) return
+      const actual = get().usuarios.find(u => u.id === usuario.id) ?? usuario
+      const cambios = marcarLeidas(actual, ids, new Date().toISOString())
+      commit({ ...get(), usuarios: get().usuarios.map(u => (u.id === usuario.id ? { ...u, ...cambios } : u)) })
     },
   }), [db, hoy, usuario, error, commit, entrar, nuevo])
 

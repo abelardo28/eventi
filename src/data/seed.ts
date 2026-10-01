@@ -90,7 +90,7 @@ export function datosEjemplo(hoy: string): Db {
   // Un comprobante que subió el participante y espera validación
   const luis = personas[0]
   ev.abonos.push({ id: uid('a'), personaId: luis.id, conceptoId: T.hos.id, monto: 1000, fecha: addDays(hoy, -1), metodo: 'Transferencia',
-    comprobante: { nombre: 'transferencia.svg', tipo: 'image/svg+xml', data: comprobanteDemo(1000) }, estado: 'pendiente', registradoPor: usuarios[2].id })
+    comprobante: { nombre: 'transferencia.svg', tipo: 'image/svg+xml', data: comprobanteDemo(1000) }, estado: 'pendiente', registradoPor: usuarios[2].id, creado: `${addDays(hoy, -1)}T19:20:00` })
   ev.abonos.sort((a, b) => b.fecha.localeCompare(a.fecha))
   return { version: 2, eventos: [ev], usuarios }
 }

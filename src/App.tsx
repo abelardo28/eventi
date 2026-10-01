@@ -9,6 +9,8 @@ import { MisPagos } from './pages/MisPagos'
 import { Usuarios } from './pages/Usuarios'
 import { Acceso, CambiarPasswordObligatorio } from './pages/Acceso'
 import { NoEncontrado } from './pages/NoEncontrado'
+import { Notificaciones } from './pages/Notificaciones'
+import { AvisosDelSistema } from './data/notificaciones'
 
 function ScrollArriba() {
   const { pathname } = useLocation()
@@ -31,6 +33,7 @@ function Rutas() {
     <Routes>
       <Route path="/" element={usuario.rol === 'participante' ? <MisPagos /> : <Home />} />
       <Route path="/usuarios" element={<Usuarios />} />
+      <Route path="/notificaciones" element={<Notificaciones />} />
       <Route path="/e/:id" element={<Evento />} />
       <Route path="/e/:id/p/:pid" element={<Persona />} />
       <Route path="/e/:id/:tab" element={<Evento />} />
@@ -46,6 +49,7 @@ export default function App() {
         <HashRouter>
           <ScrollArriba />
           <main className="app"><Rutas /></main>
+          <AvisosDelSistema />
           <ErrorGuardado />
         </HashRouter>
       </ToastProvider>

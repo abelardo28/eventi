@@ -6,7 +6,8 @@ import type { Persona } from '../domain/types'
 import { fMes, toDate } from '../domain/fechas'
 import { ROLES } from '../domain/permisos'
 import { useStore } from '../data/store'
-import { IcBack, Logo } from './icons'
+import { IcBack, IcBell, Logo } from './icons'
+import { useNotificaciones } from '../data/notificaciones'
 import { CuentaSheet } from '../sheets/CuentaSheet'
 
 export function Bar({ value, tone, due, thick }: { value: number; tone?: 'bad' | 'done'; due?: number; thick?: boolean }) {
@@ -30,6 +31,16 @@ export function DateBadge({ fecha, hoy }: { fecha: string; hoy?: boolean }) {
   return <span className="av date-av"><b>{toDate(fecha).getDate()}</b><span>{fMes(fecha)}</span></span>
 }
 
+function Campana() {
+  const nav = useNavigate()
+  const { nuevas } = useNotificaciones()
+  return (
+    <button className="iconbtn campana" onClick={() => nav('/notificaciones')} aria-label={nuevas.length ? `Notificaciones, ${nuevas.length} sin leer` : 'Notificaciones'}>
+      <IcBell />{nuevas.length > 0 && <span className="campana-n num">{nuevas.length > 9 ? '9+' : nuevas.length}</span>}
+    </button>
+  )
+}
+
 export function Topbar({ back }: { back?: string }) {
   const nav = useNavigate()
   const { usuario } = useStore()
@@ -39,6 +50,7 @@ export function Topbar({ back }: { back?: string }) {
       {back && <button className="iconbtn" onClick={() => nav(back)} aria-label="Regresar"><IcBack /></button>}
       <button className="brand" onClick={() => nav('/')} aria-label="Inicio de Eventi"><Logo /><span>eventi</span></button>
       <span className="spacer" />
+      {usuario && <Campana />}
       {usuario && (
         <button className="userbtn" onClick={() => setMenu(true)} aria-label="Mi cuenta">
           <Avatar p={usuario} /><span className="rolchip">{ROLES[usuario.rol].nombre}</span>

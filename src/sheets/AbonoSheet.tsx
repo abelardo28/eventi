@@ -55,7 +55,7 @@ export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento;
     const ok = editarEvento(ev.id, e => {
       e.abonos.unshift({
         id: uid('a'), personaId: persona.id, conceptoId: c.id, monto: m, fecha: fecha || hoy, metodo,
-        comprobante: metodo === 'Efectivo' ? null : comp, estado: propuesta ? 'pendiente' : 'validado', registradoPor: usuario?.id ?? null,
+        comprobante: metodo === 'Efectivo' ? null : comp, estado: propuesta ? 'pendiente' : 'validado', registradoPor: usuario?.id ?? null, creado: new Date().toISOString(),
       })
     })
     if (ok) { toast(propuesta ? 'Comprobante enviado. Te avisaremos cuando lo validen' : `Abono de ${money(m)} registrado`); onClose() }

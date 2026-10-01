@@ -19,6 +19,7 @@ export function AbonoPendiente({ ev, a, mostrarPersona }: { ev: Evento; a: Abono
       const x = e.abonos.find(y => y.id === a.id)!
       x.estado = estado
       x.validadoPor = usuario?.id ?? null
+      x.resuelto = new Date().toISOString()
       if (estado === 'rechazado') x.motivoRechazo = motivo.trim() || 'Sin motivo'
     })
     if (ok) toast(estado === 'validado' ? `Abono de ${money(a.monto)} validado` : 'Abono rechazado')

@@ -10,6 +10,7 @@ App web (adaptada al celular e instalable como PWA) para organizar eventos y lle
 - Abonos con forma de pago y comprobante (foto o PDF; las fotos se reducen antes de guardarse).
 - Actividades con movimientos de gasto e ingreso y su ganancia.
 - Recordatorios: configuración de días de aviso, cola de envíos y botón que abre WhatsApp con el mensaje listo (`wa.me`). Los textos de WhatsApp (próximo y vencido) y de la notificación push se editan por evento con variables `{nombre}`, `{concepto}`, `{monto}`, `{fecha}`, `{estado}`, `{evento}` y vista previa en vivo.
+- **Notificaciones** (campana arriba a la derecha): comprobante enviado por un participante (al personal del evento), pago registrado (al participante y al administrador), pago validado o rechazado con su motivo, pagos por vencer y vencidos, y un resumen diario para el personal. Se pueden activar los avisos del sistema en el dispositivo; con la app cerrada llegarán cuando haya servidor (Web Push).
 - **Importar desde Excel** (.xlsx, administrador): hojas *Conceptos*, *Personas* (una columna por concepto con el monto que le toca), *Pagos* y *Gastos*. Reconoce encabezados comunes, muestra una vista previa con las filas que no entendió y no duplica si se importa el mismo archivo otra vez. Hay una plantilla descargable.
 
 - **Cuentas y roles:** iniciar sesión, registrarse y gestión de usuarios.

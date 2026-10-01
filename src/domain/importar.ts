@@ -235,7 +235,7 @@ export function planImportacion(ev: Evento, hojas: Hoja[], opciones: { hoy: stri
         }
         plan.abonos.push({
           id: nuevoId('a'), personaId: p.id, conceptoId: c.id, monto, fecha: dia, metodo: cMe >= 0 ? metodo(r[cMe]) : 'Efectivo',
-          comprobante: null, estado: 'validado', registradoPor: opciones.usuarioId ?? null,
+          comprobante: null, estado: 'validado', registradoPor: opciones.usuarioId ?? null, origen: 'importado',
         })
       }
     }

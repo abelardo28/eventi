@@ -62,6 +62,11 @@ export interface Abono {
   estado: EstadoAbono
   registradoPor?: string | null
   validadoPor?: string | null
+  /** Cuándo se registró y cuándo se validó o rechazó (fecha y hora ISO). */
+  creado?: string
+  resuelto?: string
+  /** Los abonos importados de Excel no generan notificaciones. */
+  origen?: 'importado'
   motivoRechazo?: string
 }
 
@@ -142,6 +147,9 @@ export interface Usuario {
   salt: string
   debeCambiarPassword?: boolean
   creado: ISODate
+  /** Notificaciones leídas: todo lo anterior a `notifLeidasHasta` más las marcadas una a una. */
+  notifLeidasHasta?: string
+  notifLeidas?: string[]
 }
 
 export interface Db {

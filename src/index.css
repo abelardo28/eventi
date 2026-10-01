@@ -253,3 +253,19 @@ textarea.inp{resize:vertical;line-height:1.45;min-height:64px}
 .impgrid b{display:block;font-size:20px;color:var(--ink);font-weight:600}
 .implist{margin:6px 0 0;padding-left:18px;font-size:12.5px;display:grid;gap:4px;max-height:220px;overflow:auto}
 .evacc{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.campana{position:relative}
+.campana-n{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:linear-gradient(135deg,#ff7a3d,#f2386f);color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg, #ECEEF2)}
+.badge.acc{background:linear-gradient(135deg,#ff7a3d,#f2386f);color:#fff}
+.notif{width:100%;display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:start;text-align:left;background:none;border:0;padding:12px 4px;border-radius:14px;color:inherit}
+.notif .name{font-weight:600;font-size:14.5px;display:block}
+.notif .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.notif-ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--track);color:var(--ink)}
+.notif-ic.ok{background:color-mix(in srgb,#1fa971 16%,transparent);color:#178a5c}
+.notif-ic.bad{background:color-mix(in srgb,#e5484d 15%,transparent);color:#d13438}
+.notif-ic.warn{background:color-mix(in srgb,#f5a524 20%,transparent);color:#b86e00}
+.notif-ic.acc{background:color-mix(in srgb,#ff7a3d 16%,transparent);color:#e0602a}
+.notif-t{font-size:11.5px;color:var(--faint);white-space:nowrap;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.punto{width:8px;height:8px;border-radius:50%;background:#f2386f;display:block}
+.notif.nueva .name{color:var(--ink)}
+.notif-ev{padding:0 4px 8px 52px;margin-top:-8px}
+.list > div + div .notif{border-top:1px solid var(--line);border-radius:0}
