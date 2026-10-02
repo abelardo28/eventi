@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { formaDePago } from '../domain/reparto'
 import { useStore } from '../data/store'
 import { cola, composicion, concepto, debido, estadoPersona, money, pagado, pct, plan, siguiente, totalPersona } from '../domain/calc'
 import { fCorta } from '../domain/fechas'
@@ -80,14 +81,14 @@ export function Persona() {
           {can('abonos.validar') && abonos.filter(a => a.estado === 'pendiente').map(a => <div key={a.id} style={{ marginBlock: 8 }}><AbonoPendiente ev={ev} a={a} /></div>)}
           {abonos.filter(a => !(can('abonos.validar') && a.estado === 'pendiente')).map(a => (
             <div key={a.id} className="abono">
-              <span><b>{concepto(ev, a.conceptoId)?.nombre}</b><div className="small muted">{fCorta(a.fecha)} · {a.metodo}</div>
+              <span><b>{concepto(ev, a.conceptoId)?.nombre}</b><div className="small muted">{fCorta(a.fecha)} · {formaDePago(ev, a)}</div>
                 {a.estado === 'pendiente' && <span className="pill warn">Por validar</span>}
                 {a.estado === 'rechazado' && <span className="pill bad" title={a.motivoRechazo}>Rechazado</span>}</span>
               <span style={{ textAlign: 'right' }}>
                 <b className={`num ${a.estado === 'rechazado' ? 'faint' : ''}`} style={a.estado === 'rechazado' ? { textDecoration: 'line-through' } : undefined}>{money(a.monto)}</b>
                 <div>{a.comprobante
                   ? <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })}>Ver comprobante</button>
-                  : <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })} style={{ color: 'var(--faint)' }}>{a.metodo === 'Efectivo' ? 'Efectivo' : 'Sin comprobante'}</button>}</div>
+                  : <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })} style={{ color: 'var(--faint)' }}>{a.metodo === 'Efectivo' || a.metodo === 'Actividad' ? a.metodo : 'Sin comprobante'}</button>}</div>
               </span>
             </div>
           ))}

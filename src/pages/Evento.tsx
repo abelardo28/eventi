@@ -12,7 +12,8 @@ import { TabConceptos } from './tabs/Conceptos'
 import { TabActividades } from './tabs/Actividades'
 import { TabAvisos } from './tabs/Avisos'
 import { ImportarSheet } from '../sheets/ImportarSheet'
-import { IcUpload } from '../ui/icons'
+import { EditarEventoSheet } from '../sheets/EventoSheet'
+import { IcEdit, IcUpload } from '../ui/icons'
 
 const TABS = [
   ['resumen', 'Resumen'],
@@ -28,6 +29,7 @@ export function Evento() {
   const { evento, hoy, usuario } = useStore()
   const nav = useNavigate()
   const [importar, setImportar] = useState(false)
+  const [editar, setEditar] = useState(false)
   const ev = evento(id)
   if (!ev || !puede(usuario, 'evento.ver', ev.id)) return <NoEncontrado />
   const actual = (TABS.some(t => t[0] === tab) ? tab : 'resumen') as Tab
@@ -42,8 +44,11 @@ export function Evento() {
         <div className="meta">
           {fCorta(ev.fecha)}{ev.fin ? ` – ${fCorta(ev.fin)}` : ''} · {ev.lugar} · {dias > 0 ? `faltan ${dias} días` : dias === 0 ? 'es hoy' : 'ya pasó'}
         </div>
-        {puede(usuario, 'datos.importar', ev.id) && (
-          <div className="evacc"><button className="btn sm ghost" onClick={() => setImportar(true)}><IcUpload />Importar Excel</button></div>
+        {(puede(usuario, 'evento.editar', ev.id) || puede(usuario, 'datos.importar', ev.id)) && (
+          <div className="evacc">
+            {puede(usuario, 'evento.editar', ev.id) && <button className="btn sm ghost" onClick={() => setEditar(true)}><IcEdit />Editar evento</button>}
+            {puede(usuario, 'datos.importar', ev.id) && <button className="btn sm ghost" onClick={() => setImportar(true)}><IcUpload />Importar Excel</button>}
+          </div>
         )}
       </section>
       <nav className="tabs glass" role="tablist">
@@ -58,6 +63,7 @@ export function Evento() {
       {actual === 'conceptos' && <TabConceptos ev={ev} />}
       {actual === 'actividades' && <TabActividades ev={ev} />}
       {actual === 'avisos' && <TabAvisos ev={ev} />}
+      {editar && <EditarEventoSheet ev={ev} onClose={() => setEditar(false)} />}
       {importar && <ImportarSheet ev={ev} onClose={() => setImportar(false)} />}
     </>
   )

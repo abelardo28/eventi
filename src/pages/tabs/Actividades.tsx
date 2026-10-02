@@ -1,18 +1,20 @@
 import { useState } from 'react'
-import { gastado, money, recuperado, totalGastado, totalRecuperado } from '../../domain/calc'
+import { concepto, gastado, money, plural, recuperado, totalGastado, totalRecuperado } from '../../domain/calc'
+import { disponible, repartido } from '../../domain/reparto'
 import type { Evento } from '../../domain/types'
 import { useStore } from '../../data/store'
 import { puede } from '../../domain/permisos'
 import { IcPlus } from '../../ui/icons'
 import { Bar } from '../../ui/kit'
-import { ActividadSheet, MovimientoSheet } from '../../sheets/ActividadSheets'
+import { ActividadSheet, MovimientoSheet, RepartoSheet } from '../../sheets/ActividadSheets'
 
 const signo = (n: number) => (n >= 0 ? '+' : '−') + money(Math.abs(n))
 
 export function TabActividades({ ev }: { ev: Evento }) {
   const { usuario } = useStore()
   const movs = puede(usuario, 'actividades.movimientos', ev.id)
-  const [sheet, setSheet] = useState<{ t: 'nueva' } | { t: 'mov'; id: string; tipo: 'gasto' | 'ingreso' } | null>(null)
+  const abonar = movs && puede(usuario, 'abonos.registrar', ev.id)
+  const [sheet, setSheet] = useState<{ t: 'nueva' } | { t: 'mov'; id: string; tipo: 'gasto' | 'ingreso' } | { t: 'reparto'; id: string } | null>(null)
   const gast = totalGastado(ev), rec = totalRecuperado(ev)
   const max = Math.max(1, ...ev.actividades.flatMap(a => [gastado(a), recuperado(a)]))
 
@@ -26,7 +28,14 @@ export function TabActividades({ ev }: { ev: Evento }) {
         </div>
       </section>
       {ev.actividades.map(a => {
-        const g = gastado(a), r = recuperado(a)
+        const g = gastado(a), r = recuperado(a), rep = repartido(ev, a.id), disp = disponible(ev, a)
+        // Lo abonado a cada concepto con esta ganancia, para que se vea a dónde se fue.
+        const destinos = new Map<string, { monto: number; personas: Set<string> }>()
+        for (const x of ev.abonos) {
+          if (x.actividadId !== a.id || x.estado === 'rechazado') continue
+          const d = destinos.get(x.conceptoId) ?? { monto: 0, personas: new Set<string>() }
+          d.monto += x.monto; d.personas.add(x.personaId); destinos.set(x.conceptoId, d)
+        }
         return (
           <section key={a.id} className="glass panel stack act">
             <div className="between">
@@ -44,6 +53,13 @@ export function TabActividades({ ev }: { ev: Evento }) {
                 <button className="btn sm ghost" onClick={() => setSheet({ t: 'mov', id: a.id, tipo: 'ingreso' })}>+ Ingreso</button>
               </span>}
             </div>
+            {rep > 0 && (
+              <div className="reparto-l">
+                {[...destinos].map(([cid, d]) => <div key={cid}>Abonado a {concepto(ev, cid)?.nombre ?? 'concepto eliminado'}: <b className="num">{money(d.monto)}</b> entre {plural(d.personas.size, 'persona', 'personas')}</div>)}
+                <div>Ganancia por abonar: <b className="num">{money(disp)}</b></div>
+              </div>
+            )}
+            {abonar && disp > 0 && <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => setSheet({ t: 'reparto', id: a.id })}>Abonar ganancia a un concepto</button>}
             {a.movimientos.length > 0 && (
               <details>
                 <summary className="small" style={{ cursor: 'pointer', fontWeight: 600 }}>Movimientos ({a.movimientos.length})</summary>
@@ -61,6 +77,7 @@ export function TabActividades({ ev }: { ev: Evento }) {
       {!ev.actividades.length && <div className="glass panel empty">Registra rifas, loterías o ventas para llevar lo que se gastó y lo que se recuperó.</div>}
       {puede(usuario, 'actividades.crear', ev.id) && <button className="btn ghost block" onClick={() => setSheet({ t: 'nueva' })}><IcPlus />Nueva actividad</button>}
       {sheet?.t === 'nueva' && <ActividadSheet ev={ev} onClose={() => setSheet(null)} />}
+      {sheet?.t === 'reparto' && <RepartoSheet ev={ev} actividadId={sheet.id} onClose={() => setSheet(null)} />}
       {sheet?.t === 'mov' && <MovimientoSheet ev={ev} actividadId={sheet.id} tipo={sheet.tipo} onClose={() => setSheet(null)} />}
     </div>
   )

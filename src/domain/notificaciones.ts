@@ -2,6 +2,7 @@ import type { Abono, Db, Usuario } from './types'
 import { concepto, money, plural, siguiente } from './calc'
 import { addDays, diasEntre, fCorta } from './fechas'
 import { tieneEvento } from './permisos'
+import { formaDePago } from './reparto'
 
 export type TipoNotif = 'comprobante' | 'registrado' | 'validado' | 'rechazado' | 'por-vencer' | 'vencido' | 'resumen'
 
@@ -56,7 +57,7 @@ export function notificaciones(db: Db, u: Usuario, hoy: string): Notificacion[] 
         out.push({
           id: `reg:${a.id}`, tipo: 'registrado', eventoId: ev.id, fecha: momento(a), ruta: `/e/${ev.id}/p/${p.id}`,
           titulo: esMio ? 'Se registró tu pago' : `${nombreDe(db, a.registradoPor)} registró un pago`,
-          texto: esMio ? `${base(a)} · ${a.metodo.toLowerCase()}, ${fCorta(a.fecha)}` : `${p.nombre} · ${base(a)}`,
+          texto: esMio ? `${base(a)} · ${formaDePago(ev, a).replace(/^./, l => l.toLowerCase())}, ${fCorta(a.fecha)}` : `${p.nombre} · ${base(a)}`,
         })
       }
 

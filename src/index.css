@@ -300,3 +300,10 @@ button.cuota:active{transform:scale(.97)}
 @media (min-width:1200px){
   .deck.d3{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+/* Reparto de ganancia: personas con casilla y su parte */
+.selp{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding-block:10px;border-bottom:1px solid var(--line);cursor:pointer}
+.selp input{width:18px;height:18px;accent-color:var(--accent);margin:0}
+.selp.todos{border-bottom-width:2px}
+.warn-t{color:var(--warn)}
+.reparto-l{font-size:12px;color:var(--muted)}

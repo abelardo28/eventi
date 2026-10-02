@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { formaDePago } from '../domain/reparto'
 import { useStore } from '../data/store'
 import { concepto, money } from '../domain/calc'
 import { fCorta } from '../domain/fechas'
@@ -21,7 +22,7 @@ export function ComprobanteSheet({ ev, abonoId, onClose }: { ev: Evento; abonoId
       {c && (c.tipo.startsWith('image/')
         ? <img className="thumb" style={{ maxWidth: '100%', margin: '0 auto' }} src={c.data} alt="Comprobante" />
         : <a className="btn ghost" href={c.data} target="_blank" rel="noreferrer">Abrir {c.nombre}</a>)}
-      <div className="between small"><span className="muted">{a.metodo} · {fCorta(a.fecha)}</span><b className="num">{money(a.monto)}</b></div>
+      <div className="between small"><span className="muted">{formaDePago(ev, a)} · {fCorta(a.fecha)}</span><b className="num">{money(a.monto)}</b></div>
       {a.estado === 'rechazado' && <div className="small neg">Rechazado: {a.motivoRechazo}</div>}
       {a.estado === 'pendiente' && <div className="small" style={{ color: 'var(--warn)' }}>Por validar</div>}
       {!puede(usuario, 'abonos.borrar', ev.id) ? null : borrar ? (

@@ -45,7 +45,8 @@ export interface Persona {
   nota?: string
 }
 
-export type Metodo = 'Efectivo' | 'Transferencia' | 'Depósito'
+/** 'Actividad' = parte de la ganancia de una rifa, lotería o venta abonada a un concepto. */
+export type Metodo = 'Efectivo' | 'Transferencia' | 'Depósito' | 'Actividad'
 
 export interface Comprobante {
   nombre: string
@@ -71,6 +72,8 @@ export interface Abono {
   resuelto?: string
   /** Los abonos importados de Excel no generan notificaciones. */
   origen?: 'importado'
+  /** Actividad de donde salió el dinero cuando metodo es 'Actividad'. */
+  actividadId?: string
   motivoRechazo?: string
 }
 
