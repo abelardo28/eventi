@@ -31,7 +31,9 @@ npm test         # pruebas de la lógica de pagos
 npm run build    # genera dist/ (sitio estático)
 ```
 
-`dist/` se puede publicar en cualquier hosting estático (Vercel, Netlify, Cloudflare Pages, GitHub Pages). Usa rutas con `#`, así que no necesita configuración de redirecciones.
+Cada push a `main` se publica solo en GitHub Pages (`.github/workflows/pages.yml`; en el repositorio, *Settings > Pages > Source: GitHub Actions*).
+
+`dist/` también se puede publicar en cualquier hosting estático (Vercel, Netlify, Cloudflare Pages, GitHub Pages). Usa rutas con `#`, así que no necesita configuración de redirecciones.
 
 ## Estructura
 
