@@ -65,3 +65,41 @@ describe('importar desde Excel', () => {
     expect(pagado(ev, 'p1', ev.conceptos[0].id)).toBe(1000)
   })
 })
+
+describe('hoja de control con Total y Anticipo por concepto', () => {
+  const hoja = { sheet: 'Pagos Extras', data: [
+    ['CONTROL DE PAGOS DE ACOMPAÑANTES', null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    ['Jugador\n(familiar de)', 'Nombre del\nFamiliar', 'Parentesco', 'Habitación', 'Total Hotel', 'Anticipo\nHotel', 'Total\nTransporte', 'Anticipo\nTransporte'],
+    ['Emilio G', 'Esmeralda', 'Abuela', 'Hab. 1', 4100, 900, null, null],
+    [null, 'Melisa', 'Tia', 'Hab. 2', 3733.33, 708.33, null, null],
+    ['Santiago T', 'Norma', 'Abuela', 'Hab. 1', null, null, null, 338.5],
+    [null, 'José', 'Tio', null, 0, 0, null, null],
+    ['TOTALES', null, null, null, 7833.33, 1608.33, 0, 338.5],
+  ] }
+
+  it('reconoce el formato y lleva cada fila a persona, cargos y anticipos', () => {
+    const ev = vacio()
+    ev.conceptos.push({ id: 'hos', nombre: 'Hospedaje', base: 2500, tarifa: null, cuotas: [{ fecha: '2026-11-01', pct: 100 }] })
+    expect(tipoDeHoja(hoja)).toBe('cuentas')
+    const plan = planImportacion(ev, [hoja], op)
+    expect(plan.conceptos.map(c => c.nombre)).toEqual(['Transporte'])
+    expect(plan.personas.map(p => [p.nombre, p.grupo, p.nota])).toEqual([
+      ['Esmeralda', 'Emilio G', 'Abuela · Hab. 1'], ['Melisa', 'Emilio G', 'Tia · Hab. 2'], ['Norma', 'Santiago T', 'Abuela · Hab. 1'], ['José', 'Santiago T', 'Tio'],
+    ])
+    aplicarPlan(ev, plan)
+    const melisa = ev.personas[1]
+    expect(melisa.cargos).toEqual([{ conceptoId: 'hos', adultos: null, menores: null, cantidad: 1, monto: 3733.33 }])
+    expect(pagado(ev, melisa.id, 'hos')).toBe(708.33)
+    expect(pagado(ev, null)).toBe(900 + 708.33 + 338.5)
+  })
+
+  it('al reimportar con anticipos mayores solo registra la diferencia', () => {
+    const ev = vacio()
+    aplicarPlan(ev, planImportacion(ev, [hoja], op))
+    const nueva = structuredClone(hoja); nueva.data[3][5] = 1500
+    const plan = planImportacion(ev, [nueva], { ...op, hoy: '2026-10-05' })
+    expect(plan.abonos.map(a => a.monto)).toEqual([600])
+    expect(resumenPlan(plan)).toMatchObject({ personas: 0, conceptos: 0 })
+  })
+})

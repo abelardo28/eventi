@@ -1,7 +1,11 @@
 import type { Abono, Actividad, Cargo, Concepto, Evento, ISODate, Persona } from './types'
 import { addDays } from './fechas'
 
-export const money = (n: number) => '$' + Math.round(n).toLocaleString('es-MX')
+/** Pesos sin decimales salvo que haya centavos ($3,733.33). */
+export const money = (n: number) => {
+  const r = Math.round(n * 100) / 100
+  return (r < 0 ? '-$' : '$') + Math.abs(r).toLocaleString('es-MX', Number.isInteger(r) ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 export const pct = (a: number, b: number) => (b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0)
 export const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`
 

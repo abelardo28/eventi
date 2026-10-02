@@ -9,7 +9,7 @@ import { addDays } from './fechas'
 
 export type Celda = string | number | boolean | Date | null | undefined
 export interface Hoja { sheet: string; data: Celda[][] }
-export type TipoHoja = 'conceptos' | 'personas' | 'pagos' | 'gastos'
+export type TipoHoja = 'cuentas' | 'conceptos' | 'personas' | 'pagos' | 'gastos'
 export interface Aviso { hoja: string; fila: number; texto: string; grave: boolean }
 
 export interface PlanImport {
@@ -27,12 +27,21 @@ export interface PlanImport {
 
 export const norm = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9ñ ]+/g, ' ').replace(/\s+/g, ' ').trim()
 
-const HOJAS: Record<TipoHoja, string[]> = {
+const HOJAS: Record<Exclude<TipoHoja, 'cuentas'>, string[]> = {
   conceptos: ['conceptos', 'concepto', 'tarifas', 'costos'],
   personas: ['personas', 'participantes', 'familias', 'integrantes', 'jugadores', 'lista'],
   pagos: ['pagos', 'abonos', 'cobros', 'depositos'],
   gastos: ['gastos', 'actividades', 'movimientos', 'ingresos', 'rifas'],
 }
+
+/** Nombres que se tratan como el mismo concepto (Hotel = Hospedaje). */
+const SINONIMOS_CONCEPTO = [
+  ['hospedaje', 'hotel', 'habitacion', 'hospedaje hotel', 'alojamiento'],
+  ['transporte', 'camion', 'autobus', 'traslado', 'transportacion'],
+  ['inscripcion', 'inscripciones', 'registro'],
+  ['uniformes', 'uniforme'],
+]
+const r2 = (n: number) => Math.round(n * 100) / 100
 
 const COL = {
   nombre: ['nombre', 'persona', 'familia', 'participante', 'jugador', 'quien', 'nombre completo', 'responsable'],
@@ -114,8 +123,27 @@ function encabezados(data: Celda[][]): number {
   return 0
 }
 
+/**
+ * Hoja de control "una fila por persona" con columnas Total X / Anticipo X por concepto
+ * (p. ej. Total Hotel, Anticipo Hotel, Total Transporte…). Devuelve los pares encontrados.
+ */
+export function paresTotalAnticipo(encOriginal: Celda[]): { nombre: string; total: number; anticipo: number }[] {
+  const enc = encOriginal.map(norm)
+  const out: { nombre: string; total: number; anticipo: number }[] = []
+  enc.forEach((e, i) => {
+    const m = e.match(/^(total|costo|monto) (.+)$/)
+    if (!m || /^(general|anticipo|anticipos|abonado|pagado|pagos?|saldo)$/.test(m[2])) return
+    const j = enc.findIndex(x => new RegExp(`^(anticipo|anticipos|abono|abonos|abonado|pagado|pagos?) ${m[2]}$`).test(x))
+    if (j < 0) return
+    const original = String(encOriginal[i] ?? '').trim().split(/\s+/).slice(1).join(' ')
+    out.push({ nombre: original.charAt(0).toUpperCase() + original.slice(1), total: i, anticipo: j })
+  })
+  return out
+}
+
 export function tipoDeHoja(h: Hoja): TipoHoja | null {
   const n = norm(h.sheet)
+  if (paresTotalAnticipo(h.data[encabezados(h.data)] ?? []).length) return 'cuentas'
   for (const [t, ns] of Object.entries(HOJAS) as [TipoHoja, string[]][]) if (ns.some(x => n === x || n.startsWith(x + ' '))) return t
   // Sin nombre reconocible: se adivina por las columnas
   const enc = (h.data[encabezados(h.data)] ?? []).map(norm)
@@ -135,11 +163,14 @@ export function planImportacion(ev: Evento, hojas: Hoja[], opciones: { hoy: stri
   const aviso = (hoja: string, fila: number, t: string, grave = true) => plan.avisos.push({ hoja, fila, texto: t, grave })
   const tipos = hojas.map(h => ({ h, tipo: tipoDeHoja(h) }))
   // Orden fijo: primero conceptos, luego personas, pagos y gastos (cada uno depende del anterior)
-  const orden: TipoHoja[] = ['conceptos', 'personas', 'pagos', 'gastos']
+  const orden: TipoHoja[] = ['conceptos', 'cuentas', 'personas', 'pagos', 'gastos']
   for (const { h, tipo } of tipos) plan.hojas.push({ nombre: h.sheet, tipo, filas: Math.max(0, h.data.length - encabezados(h.data) - 1) })
 
   const conceptos = () => [...ev.conceptos, ...plan.conceptos]
-  const buscarConcepto = (n: string) => conceptos().find(c => norm(c.nombre) === norm(n))
+  const buscarConcepto = (n: string) => {
+    const k = norm(n), grupo = SINONIMOS_CONCEPTO.find(g => g.includes(k)) ?? [k]
+    return conceptos().find(c => norm(c.nombre) === k) ?? conceptos().find(c => grupo.includes(norm(c.nombre)))
+  }
   const personas = () => [...ev.personas, ...plan.personas]
   const buscarPersona = (n: string) => {
     const k = norm(n)
@@ -157,6 +188,79 @@ export function planImportacion(ev: Evento, hojas: Hoja[], opciones: { hoy: stri
     const enc = (h.data[ie] ?? []).map(norm)
     const usadas = new Set<number>()
     const filas = h.data.slice(ie + 1).map((r, k) => ({ r, n: ie + k + 2 })).filter(x => !vacia(x.r))
+
+    if (tipo === 'cuentas') {
+      const pares = paresTotalAnticipo(h.data[ie] ?? [])
+      pares.forEach(x => { usadas.add(x.total); usadas.add(x.anticipo) })
+      const cN = (() => { const i = enc.findIndex(e => /nombre/.test(e)); return i >= 0 ? i : columna(enc, COL.nombre, usadas) })()
+      usadas.add(cN)
+      const cG = enc.findIndex((e, i) => !usadas.has(i) && /jugador|familiar de|grupo|equipo|acompana a/.test(e))
+      const cNotas = enc.map((e, i) => (!usadas.has(i) && i !== cG && /parentesco|habitacion|cuarto|relacion|nota/.test(e) ? i : -1)).filter(i => i >= 0)
+      if (cN < 0) { aviso(h.sheet, ie + 1, 'Falta la columna con el nombre de cada persona.'); continue }
+      // Sin la fila de totales ni las notas al pie
+      const datos = filas.filter(({ r }) => !/^(totales?|notas?)\b/.test(norm(r.find(v => v != null && String(v).trim() !== '') ?? '')))
+      // Conceptos de la hoja: el que ya existe en el evento (Hotel = Hospedaje) o uno nuevo con el monto más común
+      const mapa = new Map<number, Concepto>()
+      for (const par of pares) {
+        let c = buscarConcepto(par.nombre)
+        if (!c) {
+          const totales = datos.map(f => numero(f.r[par.total])).filter((v): v is number => v != null && v > 0)
+          const anticipos = datos.map(f => numero(f.r[par.anticipo])).filter((v): v is number => v != null && v > 0)
+          if (!totales.length && !anticipos.length) continue
+          const cuenta = new Map<number, number>(); totales.forEach(v => cuenta.set(v, (cuenta.get(v) ?? 0) + 1))
+          const base = totales.length ? [...cuenta].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0] : Math.max(...anticipos)
+          c = { id: nuevoId('c'), nombre: par.nombre, base, tarifa: null, cuotas: [{ fecha: addDays(ev.fecha, -15), pct: 100 }] }
+          plan.conceptos.push(c)
+          aviso(h.sheet, ie + 1, `Se crea el concepto ${par.nombre} con un solo pago el ${addDays(ev.fecha, -15).split('-').reverse().join('/')}. Puedes cambiar sus fechas en Conceptos.`, false)
+        }
+        mapa.set(par.total, c)
+      }
+      let grupo = '', sinFecha = false
+      for (const { r, n } of datos) {
+        if (cG >= 0 && texto(r[cG])) grupo = texto(r[cG])
+        const nombre = texto(r[cN])
+        if (!nombre) continue
+        const nota = cNotas.map(i => texto(r[i])).filter(Boolean).join(' · ')
+        let p = personas().find(x => norm(x.nombre) === norm(nombre) && norm(x.grupo) === norm(grupo))
+        if (!p) {
+          p = { id: nuevoId('p'), nombre, tipo: 'Persona', telefono: '', cargos: [], ...(grupo && { grupo }), ...(nota && { nota }) }
+          plan.personas.push(p)
+        }
+        let algo = false
+        for (const par of pares) {
+          const c = mapa.get(par.total)
+          if (!c) continue
+          const total = numero(r[par.total]), anticipo = numero(r[par.anticipo])
+          if (total && total > 0) {
+            algo = true
+            const g = cargoDe(p, c.id)
+            if (!g) asignar(p, { conceptoId: c.id, adultos: null, menores: null, cantidad: 1, monto: r2(total) })
+            else if (r2(g.monto) !== r2(total)) aviso(h.sheet, n, `${nombre}: en Eventi su ${c.nombre} es ${g.monto.toLocaleString('es-MX')} y en el Excel ${total.toLocaleString('es-MX')}; se deja el de Eventi.`, false)
+          }
+          if (anticipo && anticipo > 0) {
+            algo = true
+            if (!cargoDe(p, c.id)) {
+              // Sin total en el Excel: se toma su anticipo como total para no inventar un monto
+              asignar(p, { conceptoId: c.id, adultos: null, menores: null, cantidad: 1, monto: r2(anticipo) })
+              aviso(h.sheet, n, `${nombre} tiene anticipo de ${c.nombre} pero no total; se pone ${anticipo.toLocaleString('es-MX')} como total. Corrígelo en su ficha cuando lo sepas.`, false)
+            }
+            // Solo se registra la diferencia con lo que Eventi ya tiene, así reimportar el archivo actualizado no duplica
+            const ya = ev.abonos.filter(a => a.personaId === p.id && a.conceptoId === c.id && a.estado !== 'rechazado').reduce((s, a) => s + a.monto, 0)
+              + plan.abonos.filter(a => a.personaId === p.id && a.conceptoId === c.id).reduce((s, a) => s + a.monto, 0)
+            const dif = r2(anticipo - ya)
+            if (dif > 0) {
+              sinFecha = true
+              plan.abonos.push({
+                id: nuevoId('a'), personaId: p.id, conceptoId: c.id, monto: dif, fecha: opciones.hoy, metodo: 'Efectivo',
+                comprobante: null, estado: 'validado', registradoPor: opciones.usuarioId ?? null, origen: 'importado',
+              })
+            } else if (dif < 0) aviso(h.sheet, n, `${nombre}: Eventi ya tiene ${ya.toLocaleString('es-MX')} de ${c.nombre}, más que el anticipo del Excel (${anticipo.toLocaleString('es-MX')}). No se cambia nada.`, false)
+          }
+        }
+        if (!algo) aviso(h.sheet, n, `${nombre} no tiene montos; se agrega sin conceptos.`, false)
+      }
+      if (sinFecha) aviso(h.sheet, ie + 1, 'Los anticipos no traen fecha ni forma de pago: se registran con la fecha de hoy, en efectivo.', false)
+    }
 
     if (tipo === 'conceptos') {
       let cN = columna(enc, COL.concepto, usadas)

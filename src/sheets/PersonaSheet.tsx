@@ -22,6 +22,8 @@ export function PersonaSheet({ ev, persona, onClose }: { ev: Evento; persona?: P
   const [nombre, setNombre] = useState(persona?.nombre ?? '')
   const [telefono, setTelefono] = useState(persona?.telefono ?? '')
   const [tipo, setTipo] = useState<TipoRegistro>(persona?.tipo ?? 'Persona')
+  const [grupo, setGrupo] = useState(persona?.grupo ?? '')
+  const [nota, setNota] = useState(persona?.nota ?? '')
   const [cargos, setCargos] = useState<Record<string, Borrador>>(() =>
     Object.fromEntries(ev.conceptos.map(c => [c.id, inicial(c, persona?.cargos.find(g => g.conceptoId === c.id))])))
 
@@ -43,9 +45,9 @@ export function PersonaSheet({ ev, persona, onClose }: { ev: Evento; persona?: P
     const ok = editarEvento(ev.id, e => {
       if (persona) {
         const p = e.personas.find(x => x.id === persona.id)!
-        Object.assign(p, { nombre: nombre.trim(), telefono: telefono.trim(), tipo, cargos: nuevos })
+        Object.assign(p, { nombre: nombre.trim(), telefono: telefono.trim(), tipo, cargos: nuevos, grupo: grupo.trim() || undefined, nota: nota.trim() || undefined })
       } else {
-        e.personas.push({ id: uid('p'), nombre: nombre.trim(), tipo, telefono: telefono.trim(), cargos: nuevos })
+        e.personas.push({ id: uid('p'), nombre: nombre.trim(), tipo, telefono: telefono.trim(), cargos: nuevos, ...(grupo.trim() && { grupo: grupo.trim() }), ...(nota.trim() && { nota: nota.trim() }) })
       }
     })
     if (!ok) return
@@ -59,6 +61,9 @@ export function PersonaSheet({ ev, persona, onClose }: { ev: Evento; persona?: P
       <div className="grid2">
         <label className="f">Nombre<input className="inp" id="np-n" value={nombre} onChange={e => setNombre(e.target.value)} placeholder={tipo === 'Familia' ? 'Ej. Familia López' : 'Ej. Ana López'} /></label>
         <label className="f">WhatsApp<input className="inp" id="np-t" type="tel" inputMode="tel" value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="10 dígitos" /></label>
+        <label className="f">Grupo <span className="faint">(opcional)</span><input className="inp" id="np-g" value={grupo} onChange={e => setGrupo(e.target.value)} list="np-grupos" placeholder="Ej. familiar de Emilio González" />
+          <datalist id="np-grupos">{[...new Set(ev.personas.map(x => x.grupo).filter(Boolean))].map(g => <option key={g} value={g} />)}</datalist></label>
+        <label className="f">Nota <span className="faint">(opcional)</span><input className="inp" id="np-o" value={nota} onChange={e => setNota(e.target.value)} placeholder="Parentesco, habitación…" /></label>
       </div>
       {ev.conceptos.length === 0
         ? <div className="small muted">Este evento aún no tiene conceptos. Agrégalos en la pestaña Conceptos.</div>

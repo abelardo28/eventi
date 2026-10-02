@@ -8,7 +8,7 @@ import type { Evento } from '../domain/types'
 import { IcUpload } from '../ui/icons'
 import { Sheet, useToast } from '../ui/overlay'
 
-const NOMBRE_TIPO = { conceptos: 'Conceptos', personas: 'Personas y montos', pagos: 'Pagos', gastos: 'Gastos e ingresos' } as const
+const NOMBRE_TIPO = { cuentas: 'Cuentas por persona', conceptos: 'Conceptos', personas: 'Personas y montos', pagos: 'Pagos', gastos: 'Gastos e ingresos' } as const
 
 /** Vaciar conceptos, personas, pagos y gastos desde un Excel, con vista previa antes de guardar. */
 export function ImportarSheet({ ev, onClose }: { ev: Evento; onClose: () => void }) {

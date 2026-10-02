@@ -55,6 +55,7 @@ export function Persona() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ fontSize: 26 }}>{p.nombre}</h1>
           <div className="meta">{participante ? ev.nombre : `${p.tipo} · ${p.telefono || 'Sin WhatsApp'}`}</div>
+          {(p.grupo || p.nota) && <div className="meta">{[p.grupo && `Grupo: ${p.grupo}`, p.nota].filter(Boolean).join(' · ')}</div>}
         </div>
       </section>
 

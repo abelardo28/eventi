@@ -39,6 +39,10 @@ export interface Persona {
   cargos: Cargo[]
   /** Cuenta de participante vinculada (puede ver su estado de cuenta y subir comprobantes). */
   usuarioId?: string | null
+  /** Agrupa registros, p. ej. los acompañantes de un jugador ("familiar de"). */
+  grupo?: string
+  /** Parentesco, habitación u otro dato libre. */
+  nota?: string
 }
 
 export type Metodo = 'Efectivo' | 'Transferencia' | 'Depósito'
