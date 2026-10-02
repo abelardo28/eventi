@@ -17,8 +17,8 @@ export function TabActividades({ ev }: { ev: Evento }) {
   const max = Math.max(1, ...ev.actividades.flatMap(a => [gastado(a), recuperado(a)]))
 
   return (
-    <div className="stack">
-      <section className="glass panel">
+    <div className="stack deck">
+      <section className="glass panel full">
         <div className="trio num" style={{ border: 0, padding: 0 }}>
           <div className="stat"><div className="v">{money(gast)}</div><div className="l">Gastado</div></div>
           <div className="stat"><div className="v">{money(rec)}</div><div className="l">Recuperado</div></div>

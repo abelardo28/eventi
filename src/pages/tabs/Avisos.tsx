@@ -22,8 +22,9 @@ export function TabAvisos({ ev }: { ev: Evento }) {
   const marcar = (x: Aviso) => editarEvento(ev.id, e => { e.envios.push({ id: uid('n'), fecha: hoy, personaId: x.p.id, conceptoId: x.c.id, canal: 'WhatsApp' }) })
 
   return (
-    <div className="stack-lg">
-      <section className="glass panel stack" style={config ? undefined : { opacity: .6, pointerEvents: 'none' }} aria-disabled={!config}>
+    <div className="stack-lg deck">
+      <div className="col">
+      <section className="glass panel stack o1" style={config ? undefined : { opacity: .6, pointerEvents: 'none' }} aria-disabled={!config}>
         <div className="between"><h2>Configuración</h2>{!config && <span className="small muted">Solo el administrador</span>}</div>
         <div className="between"><span>Días de aviso antes de cada pago</span><Stepper label="días" min={1} max={15} value={r.diasAntes} onChange={v => set({ diasAntes: v })} /></div>
         <div className="between"><span>Hora de envío</span><input className="inp" type="time" id="hora" value={r.hora} onChange={e => set({ hora: e.target.value || '09:00' })} style={{ width: 'auto' }} /></div>
@@ -33,9 +34,7 @@ export function TabAvisos({ ev }: { ev: Evento }) {
         <div className="small faint">Por ahora cada recordatorio se manda desde tu WhatsApp con un toque. El envío automático a la hora configurada y las notificaciones push se activan cuando conectemos el servidor.</div>
       </section>
 
-      {ej && <Mensajes ev={ev} aviso={ej} editable={config} />}
-
-      <section className="glass panel stack">
+      <section className="glass panel stack o3">
         <div><h2>Próximos recordatorios</h2><div className="small muted">{c.length} programados · {hoyN} tocan hoy</div></div>
         <div className="list">
           {c.slice(0, 20).map(x => {
@@ -58,8 +57,12 @@ export function TabAvisos({ ev }: { ev: Evento }) {
           {!c.length && <p className="muted small">No hay pagos pendientes.</p>}
         </div>
       </section>
+      </div>
 
-      <section className="glass panel">
+      <div className="col">
+      {ej && <Mensajes ev={ev} aviso={ej} editable={config} />}
+
+      <section className="glass panel o4">
         <h2 style={{ marginBottom: 4 }}>Historial</h2>
         {ev.envios.slice().reverse().slice(0, 15).map(h => (
           <div key={h.id} className="abono">
@@ -72,6 +75,7 @@ export function TabAvisos({ ev }: { ev: Evento }) {
         ))}
         {!ev.envios.length && <p className="muted small">Todavía no se ha enviado nada.</p>}
       </section>
+      </div>
     </div>
   )
 }
@@ -115,7 +119,7 @@ function Mensajes({ ev, aviso, editable }: { ev: Evento; aviso: Aviso; editable:
   const restaurar = () => setT({ ...t, ...Object.fromEntries(campos.map(k => [k, PLANTILLAS[k]])) })
 
   return (
-    <section className="glass panel stack">
+    <section className="glass panel stack o2">
       <div className="between"><h2>Mensajes</h2><span className="small muted">Ejemplo con {aviso.p.nombre}</span></div>
       <div className="chips" role="tablist">
         {TIPOS.map(x => <button key={x.id} type="button" role="tab" className="chip" aria-pressed={tipo === x.id} aria-selected={tipo === x.id} onClick={() => elegir(x.id)}>{x.nombre}</button>)}

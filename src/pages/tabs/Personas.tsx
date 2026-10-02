@@ -30,7 +30,7 @@ export function TabPersonas({ ev }: { ev: Evento }) {
         {puede(usuario, 'personas.gestionar', ev.id) && <button className="btn" onClick={() => setSheet('persona')}><IcPlus />Agregar</button>}
       </div>
       <section className="glass panel" style={{ paddingBlock: 6 }}>
-        <div className="list">
+        <div className="list cols">
           {ordenada.map((p, i) => {
             const tot = totalPersona(p), pg = pagado(ev, p.id), st = estadoPersona(ev, p, hoy)
             const encabezado = hayGrupos && (i === 0 || ordenada[i - 1].grupo !== p.grupo)

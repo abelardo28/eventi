@@ -16,7 +16,7 @@ export function MisPagos() {
       <section className="hello">
         <div><div className="eyebrow">{fLarga(hoy)}</div><h1>Hola, {usuario!.nombre.split(' ')[0]}</h1></div>
       </section>
-      <div className="stack">
+      <div className="stack deck d3">
         {regs.map(({ ev, p }) => {
           const tot = totalPersona(p), pg = pagado(ev, p.id), st = estadoPersona(ev, p, hoy)
           const pend = ev.abonos.filter(a => a.personaId === p.id && a.estado === 'pendiente').length

@@ -15,7 +15,7 @@ export function TabConceptos({ ev }: { ev: Evento }) {
   const gestiona = puede(usuario, 'conceptos.gestionar', ev.id)
 
   return (
-    <div className="stack">
+    <div className="stack deck">
       {ev.conceptos.map(c => <TarjetaConcepto key={c.id} ev={ev} c={c} hoy={hoy} onEditar={gestiona ? () => setSheet({ c }) : undefined} />)}
       {!ev.conceptos.length && <div className="glass panel empty">Este evento no tiene conceptos todavía.</div>}
       {gestiona && <button className="btn ghost block" onClick={() => setSheet({})}><IcPlus />Agregar concepto</button>}

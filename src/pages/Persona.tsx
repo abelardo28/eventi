@@ -59,8 +59,9 @@ export function Persona() {
         </div>
       </section>
 
-      <div className="stack-lg">
-        <section className="glass panel stack">
+      <div className="stack-lg deck">
+        <div className="col">
+        <section className="glass panel stack o1">
           <div className="between"><span className="eyebrow">Avance individual</span><span className={`pill ${st.k}`}>{st.t}</span></div>
           <div className="row" style={{ alignItems: 'flex-end', gap: 16 }}>
             <div className="hero num">{pct(pg, tot)}<small>%</small></div>
@@ -74,7 +75,28 @@ export function Persona() {
           {aviso && !wa && can('avisos.enviar') && <div className="small faint">Agrega su número de WhatsApp para poder mandarle recordatorios.</div>}
         </section>
 
-        <section className="glass panel">
+        <section className="glass panel o3">
+          <h2 style={{ marginBottom: 4 }}>Abonos</h2>
+          {can('abonos.validar') && abonos.filter(a => a.estado === 'pendiente').map(a => <div key={a.id} style={{ marginBlock: 8 }}><AbonoPendiente ev={ev} a={a} /></div>)}
+          {abonos.filter(a => !(can('abonos.validar') && a.estado === 'pendiente')).map(a => (
+            <div key={a.id} className="abono">
+              <span><b>{concepto(ev, a.conceptoId)?.nombre}</b><div className="small muted">{fCorta(a.fecha)} · {a.metodo}</div>
+                {a.estado === 'pendiente' && <span className="pill warn">Por validar</span>}
+                {a.estado === 'rechazado' && <span className="pill bad" title={a.motivoRechazo}>Rechazado</span>}</span>
+              <span style={{ textAlign: 'right' }}>
+                <b className={`num ${a.estado === 'rechazado' ? 'faint' : ''}`} style={a.estado === 'rechazado' ? { textDecoration: 'line-through' } : undefined}>{money(a.monto)}</b>
+                <div>{a.comprobante
+                  ? <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })}>Ver comprobante</button>
+                  : <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })} style={{ color: 'var(--faint)' }}>{a.metodo === 'Efectivo' ? 'Efectivo' : 'Sin comprobante'}</button>}</div>
+              </span>
+            </div>
+          ))}
+          {!abonos.length && <p className="muted small">Aún no hay abonos.</p>}
+        </section>
+        </div>
+
+        <div className="col">
+        <section className="glass panel o2">
           <div className="between"><h2>{participante ? 'Tus conceptos' : 'Sus conceptos'}</h2>{can('personas.gestionar') && <button className="btn sm ghost" onClick={() => setSheet({ t: 'editar' })}><IcEdit />Editar</button>}</div>
           {p.cargos.map(g => {
             const c = concepto(ev, g.conceptoId)
@@ -108,26 +130,9 @@ export function Persona() {
           {fuera.length > 0 && <p className="small faint" style={{ margin: '14px 0 0' }}>No participa en: {fuera.map(c => c.nombre).join(', ')}</p>}
         </section>
 
-        <section className="glass panel">
-          <h2 style={{ marginBottom: 4 }}>Abonos</h2>
-          {can('abonos.validar') && abonos.filter(a => a.estado === 'pendiente').map(a => <div key={a.id} style={{ marginBlock: 8 }}><AbonoPendiente ev={ev} a={a} /></div>)}
-          {abonos.filter(a => !(can('abonos.validar') && a.estado === 'pendiente')).map(a => (
-            <div key={a.id} className="abono">
-              <span><b>{concepto(ev, a.conceptoId)?.nombre}</b><div className="small muted">{fCorta(a.fecha)} · {a.metodo}</div>
-                {a.estado === 'pendiente' && <span className="pill warn">Por validar</span>}
-                {a.estado === 'rechazado' && <span className="pill bad" title={a.motivoRechazo}>Rechazado</span>}</span>
-              <span style={{ textAlign: 'right' }}>
-                <b className={`num ${a.estado === 'rechazado' ? 'faint' : ''}`} style={a.estado === 'rechazado' ? { textDecoration: 'line-through' } : undefined}>{money(a.monto)}</b>
-                <div>{a.comprobante
-                  ? <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })}>Ver comprobante</button>
-                  : <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })} style={{ color: 'var(--faint)' }}>{a.metodo === 'Efectivo' ? 'Efectivo' : 'Sin comprobante'}</button>}</div>
-              </span>
-            </div>
-          ))}
-          {!abonos.length && <p className="muted small">Aún no hay abonos.</p>}
-        </section>
+        </div>
 
-        {can('personas.borrar') && <section>
+        {can('personas.borrar') && <section className="o5">
           {borrar ? (
             <div className="confirm">
               <span>¿Quitar a {p.nombre} del evento? También se borran sus {abonos.length} abonos. No se puede deshacer.</span>

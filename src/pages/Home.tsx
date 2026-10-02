@@ -23,7 +23,7 @@ export function Home() {
         {crear && <button className="btn" onClick={() => setNuevo(true)}><IcPlus />Nuevo evento</button>}
       </section>
 
-      <div className="stack">
+      <div className="stack deck d3">
         {eventos.length === 0 && (
           <div className="glass panel empty">
             {crear

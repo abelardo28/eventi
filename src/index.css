@@ -276,3 +276,27 @@ button.cuota:active{transform:scale(.97)}
 .cuota.total{background:var(--glass-strong)}
 .grupo-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 4px 6px;font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .grupo-h .num{text-transform:none;letter-spacing:0;font-weight:600}
+
+/* Computadora: la app usa el ancho de la pantalla y acomoda las tarjetas en columnas */
+/* En celular las columnas se deshacen y las tarjetas conservan su orden de lectura */
+@media (max-width:899.98px){
+  .deck > .col{display:contents}
+  .o1{order:1}.o2{order:2}.o3{order:3}.o4{order:4}.o5{order:5}
+}
+@media (min-width:900px){
+  body{padding-inline:32px}
+  .deck > .col{display:flex;flex-direction:column;gap:18px;min-width:0}
+  .app{max-width:1180px}
+  .tabs{display:inline-flex;max-width:100%}
+  .deck{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+  .deck > .full,.deck > .empty,.deck > .btn.block,.deck > p,.deck > .small,.deck > section:not(.glass){grid-column:1/-1}
+  .deck.d3 > .evcard{height:100%}
+  .list.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px}
+  .list.cols > .grupo-h{grid-column:1/-1}
+  .hello h1{font-size:36px}
+  .sheet{max-width:620px}
+  .acceso{padding-block:72px 24px}
+}
+@media (min-width:1200px){
+  .deck.d3{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

@@ -28,7 +28,7 @@ export function TabResumen({ ev }: { ev: Evento }) {
   }
 
   return (
-    <div className="stack-lg">
+    <div className="stack-lg deck">
       {pendientes.length > 0 && (
         <section className="glass panel stack">
           <div className="between"><h2>Por validar</h2><span className="pill warn">{pendientes.length}</span></div>
