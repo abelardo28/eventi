@@ -39,7 +39,7 @@ function Rutas() {
       <Route path="/notificaciones" element={<Notificaciones />} />
       <Route path="/e/:id" element={<Evento />} />
       <Route path="/e/:id/p/:pid" element={<Persona />} />
-      <Route path="/e/:id/estado/:tipo/:clave" element={<EstadoCuenta />} />
+      <Route path="/e/:id/estado" element={<EstadoCuenta />} />
       <Route path="/e/:id/:tab" element={<Evento />} />
       <Route path="*" element={<NoEncontrado />} />
     </Routes>

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { useStore } from '../data/store'
-import { concepto, integrantes, money, plural } from '../domain/calc'
-import { estadoGrupo, estadoRegistro, subtotalesPorGrupo, tipoRegistro, type EstadoRegistro, type SubtotalGrupo } from '../domain/estadoCuenta'
+import { concepto, integrantes, money, plural, totalPersona } from '../domain/calc'
+import { estadoGrupo, subtotalesPorGrupo, tipoRegistro, type EstadoRegistro, type SubtotalGrupo } from '../domain/estadoCuenta'
 import { fCompleta, fCorta } from '../domain/fechas'
 import { formaDePago } from '../domain/reparto'
-import { puede, puedeVerPersona } from '../domain/permisos'
+import { puede } from '../domain/permisos'
 import type { Evento } from '../domain/types'
 import { Topbar } from '../ui/kit'
 import { IcUpload } from '../ui/icons'
@@ -14,60 +14,56 @@ import { NoEncontrado } from './NoEncontrado'
 
 const fechasEvento = (ev: Evento) => ev.fin && ev.fin !== ev.fecha ? `${fCompleta(ev.fecha)} al ${fCompleta(ev.fin)}` : fCompleta(ev.fecha)
 
-/** Estado de cuenta imprimible: de un registro (/e/:id/estado/p/:pid) o de un grupo completo (/e/:id/estado/g/:grupo). */
+/** Casilla de un grupo: marcada si están todos, a medias si solo algunos. */
+function CasillaGrupo({ todos, alguno, onChange }: { todos: boolean; alguno: boolean; onChange: (v: boolean) => void }) {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => { if (ref.current) ref.current.indeterminate = alguno && !todos }, [todos, alguno])
+  return <input ref={ref} type="checkbox" checked={todos} onChange={e => onChange(e.target.checked)} />
+}
+
+/** Estado de cuenta del evento (/e/:id/estado): se eligen los registros y sale en pantalla, PDF o impreso. */
 export function EstadoCuenta() {
-  const { id, tipo, clave } = useParams()
+  const { id } = useParams()
   const { evento, hoy, usuario } = useStore()
   const { toast } = useToast()
   // El generador de PDF se carga al abrir la página: el iPhone solo deja compartir justo después del toque
   const [pdf, setPdf] = useState<typeof import('../domain/estadoPdf') | null>(null)
   useEffect(() => { import('../domain/estadoPdf').then(setPdf, () => {}) }, [])
+  // null = todos los registros
+  const [elegidos, setElegidos] = useState<Set<string> | null>(null)
   const ev = evento(id)
-  if (!ev || !clave) return <NoEncontrado />
+  if (!ev || !puede(usuario, 'evento.ver', ev.id) || !ev.personas.length) return <NoEncontrado />
 
-  let titulo: string, sub: string, registros: EstadoRegistro[], volver: string
-  let totales: { total: number; pagado: number; saldo: number; vencido: number } | null = null
-  let ambito: 'grupo' | 'evento' = 'grupo'
-  let grupos: SubtotalGrupo[] = []
-  if (tipo === 'p') {
-    const p = ev.personas.find(x => x.id === clave)
-    if (!p || !puedeVerPersona(usuario, ev, p)) return <NoEncontrado />
-    const e = estadoRegistro(ev, p, hoy)
-    titulo = p.nombre
-    sub = [p.tipo === 'Familia' ? `Familia · ${plural(integrantes(p), 'persona', 'personas')}` : 'Persona', p.grupo && `Grupo: ${p.grupo}`].filter(Boolean).join(' · ')
-    registros = [e]
-    volver = `/e/${ev.id}/p/${p.id}`
-  } else if (tipo === 'g') {
-    if (!puede(usuario, 'evento.ver', ev.id)) return <NoEncontrado />
-    const del = ev.personas.filter(x => x.grupo === clave)
-    if (!del.length) return <NoEncontrado />
-    const g = estadoGrupo(ev, del, hoy)
-    titulo = clave
-    sub = `Grupo · ${plural(del.length, 'registro', 'registros')} · ${plural(del.reduce((s, x) => s + integrantes(x), 0), 'persona', 'personas')}`
-    registros = g.registros
-    totales = g
-    volver = `/e/${ev.id}/personas`
-  } else if (tipo === 'e') {
-    if (!puede(usuario, 'evento.ver', ev.id) || !ev.personas.length) return <NoEncontrado />
-    const orden = [...ev.personas].sort((a, b) => (a.grupo ?? '\uffff').localeCompare(b.grupo ?? '\uffff', 'es') || a.nombre.localeCompare(b.nombre, 'es'))
-    const g = estadoGrupo(ev, orden, hoy)
-    titulo = ev.nombre
-    sub = `Todo el evento · ${plural(orden.length, 'registro', 'registros')} · ${plural(orden.reduce((s, x) => s + integrantes(x), 0), 'persona', 'personas')}`
-    registros = g.registros
-    totales = g
-    ambito = 'evento'
-    grupos = subtotalesPorGrupo(g.registros)
-    volver = `/e/${ev.id}`
-  } else return <NoEncontrado />
+  const orden = [...ev.personas].sort((a, b) => (a.grupo ?? '\uffff').localeCompare(b.grupo ?? '\uffff', 'es') || a.nombre.localeCompare(b.nombre, 'es'))
+  const sel = elegidos ?? new Set(orden.map(p => p.id))
+  const elegir = (ids: string[], v: boolean) => {
+    const n = new Set(sel)
+    ids.forEach(i => (v ? n.add(i) : n.delete(i)))
+    setElegidos(n)
+  }
+  const hayGrupos = orden.some(p => p.grupo)
+  const porGrupo = [...new Set(orden.map(p => p.grupo ?? ''))].map(g => ({ g, ps: orden.filter(p => (p.grupo ?? '') === g) }))
 
-  const t = totales ?? registros[0]
+  const incluidos = orden.filter(p => sel.has(p.id))
+  const todo = incluidos.length === orden.length
+  const unGrupo = !todo && incluidos.length > 0 && incluidos.every(p => p.grupo && p.grupo === incluidos[0].grupo) ? incluidos[0].grupo! : null
+  const est = estadoGrupo(ev, incluidos, hoy)
+  const registros: EstadoRegistro[] = est.registros
+  const totales = est
+  const ambito: 'grupo' | 'evento' | 'seleccion' = todo ? 'evento' : unGrupo ? 'grupo' : 'seleccion'
+  const sg = unGrupo ? [] : subtotalesPorGrupo(registros)
+  const grupos: SubtotalGrupo[] = sg.length > 1 ? sg : []
+  const cuantos = `${plural(incluidos.length, 'registro', 'registros')} · ${plural(incluidos.reduce((s, x) => s + integrantes(x), 0), 'persona', 'personas')}`
+  const titulo = unGrupo ?? ev.nombre
+  const sub = todo ? `Todo el evento · ${cuantos}` : unGrupo ? `Grupo · ${cuantos}` : `Selección · ${cuantos}`
+  const t = totales
   const tactil = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
 
   const guardarPdf = async () => {
-    if (!pdf) return
+    if (!pdf || !incluidos.length) return
     let blob: Blob
     try { blob = pdf.estadoPdf({ ev, hoy, titulo, sub, registros, totales, ambito, grupos }) } catch { toast('No se pudo generar el PDF.'); return }
-    const nombre = pdf.nombreArchivo(titulo)
+    const nombre = pdf.nombreArchivo(unGrupo ? `${unGrupo} - ${ev.nombre}` : ev.nombre)
     const archivo = new File([blob], nombre, { type: 'application/pdf' })
     // En el celular se abre el menú de compartir (Guardar en Archivos, WhatsApp, Imprimir…)
     if (tactil && navigator.canShare?.({ files: [archivo] })) {
@@ -82,12 +78,42 @@ export function EstadoCuenta() {
 
   return (
     <>
-      <div className="noprint"><Topbar back={volver} /></div>
+      <div className="noprint"><Topbar back={`/e/${ev.id}`} /></div>
       <div className="row wrap noprint" style={{ justifyContent: 'flex-end', marginBottom: 12 }}>
-        {!tactil && <button className="btn ghost" onClick={() => window.print()}>Imprimir</button>}
-        <button className="btn" onClick={guardarPdf} disabled={!pdf}><IcUpload />{tactil ? 'Compartir o guardar PDF' : 'Descargar PDF'}</button>
+        {!tactil && <button className="btn ghost" onClick={() => window.print()} disabled={!incluidos.length}>Imprimir</button>}
+        <button className="btn" onClick={guardarPdf} disabled={!pdf || !incluidos.length}><IcUpload />{tactil ? 'Compartir o guardar PDF' : 'Descargar PDF'}</button>
       </div>
 
+      <section className="glass panel stack noprint" style={{ marginBottom: 14 }}>
+        <div className="between wrap">
+          <span><b>¿A quién incluyo?</b><div className="small muted">{incluidos.length} de {plural(orden.length, 'registro', 'registros')}</div></span>
+          <span className="row" style={{ gap: 6 }}>
+            <button className="btn sm ghost" onClick={() => setElegidos(null)} disabled={todo}>Todos</button>
+            <button className="btn sm ghost" onClick={() => setElegidos(new Set())} disabled={!incluidos.length}>Ninguno</button>
+          </span>
+        </div>
+        <div className="sel-reg">
+          {porGrupo.map(({ g, ps }) => (
+            <Fragment key={g}>
+              {hayGrupos && (
+                <label className="sel-g">
+                  <CasillaGrupo todos={ps.every(p => sel.has(p.id))} alguno={ps.some(p => sel.has(p.id))} onChange={v => elegir(ps.map(p => p.id), v)} />
+                  <span>{g || 'Sin grupo'}</span>
+                  <span className="badge gente">{plural(ps.reduce((s, x) => s + integrantes(x), 0), 'persona', 'personas')}</span>
+                </label>
+              )}
+              {ps.map(p => (
+                <label key={p.id} className="sel-p">
+                  <input type="checkbox" checked={sel.has(p.id)} onChange={e => elegir([p.id], e.target.checked)} />
+                  <span><span className="name">{p.nombre}</span><div className="sub">{p.tipo === 'Familia' ? `Familia · ${plural(integrantes(p), 'persona', 'personas')}` : 'Persona'}</div></span>
+                  <span className="small num muted">{money(totalPersona(p))}</span>
+                </label>
+              ))}
+            </Fragment>
+          ))}
+        </div>
+      </section>
+      {!incluidos.length ? <div className="glass panel empty noprint">Marca al menos un registro para armar el estado de cuenta.</div> : (
       <article className="glass panel edc">
         <header className="edc-h">
           <div>
@@ -109,7 +135,7 @@ export function EstadoCuenta() {
           {t.vencido > 0 && <div><span>Vencido</span><b className="num bad-t">{money(t.vencido)}</b></div>}
         </div>
 
-        {totales && (
+        {registros.length > 1 && (
           <section className="edc-s">
             {grupos.length > 0 && (
               <>
@@ -127,37 +153,36 @@ export function EstadoCuenta() {
                 </table>
               </>
             )}
-            <h2>{ambito === 'evento' ? 'Resumen por registro' : 'Resumen del grupo'}</h2>
+            <h2>{ambito === 'grupo' ? 'Resumen del grupo' : 'Resumen por registro'}</h2>
             <table className="edc-t">
               <thead><tr><th>Registro</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
               <tbody>
                 {registros.map(r => (
                   <tr key={r.p.id}>
-                    <td>{r.p.nombre}<small>{tipoRegistro(r)}{ambito === 'evento' && r.p.grupo && ` · ${r.p.grupo}`}{r.vencido > 0 && <> · <span className="bad-t">vencido {money(r.vencido)}</span></>}</small></td>
+                    <td>{r.p.nombre}<small>{tipoRegistro(r)}{ambito !== 'grupo' && r.p.grupo && ` · ${r.p.grupo}`}{r.vencido > 0 && <> · <span className="bad-t">vencido {money(r.vencido)}</span></>}</small></td>
                     <td className="num">{money(r.total)}</td><td className="num">{money(r.pagado)}</td><td className="num">{money(r.saldo)}</td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot><tr><td>{ambito === 'evento' ? 'Total del evento' : 'Total del grupo'}</td><td className="num">{money(totales.total)}</td><td className="num">{money(totales.pagado)}</td><td className="num">{money(totales.saldo)}</td></tr></tfoot>
+              <tfoot><tr><td>{ambito === 'evento' ? 'Total del evento' : ambito === 'seleccion' ? 'Total de la selección' : 'Total del grupo'}</td><td className="num">{money(totales.total)}</td><td className="num">{money(totales.pagado)}</td><td className="num">{money(totales.saldo)}</td></tr></tfoot>
             </table>
           </section>
         )}
 
-        {registros.map(r => <Detalle key={r.p.id} ev={ev} r={r} conNombre={!!totales} />)}
+        {registros.map(r => <Detalle key={r.p.id} ev={ev} r={r} />)}
       </article>
+      )}
     </>
   )
 }
 
-function Detalle({ ev, r, conNombre }: { ev: Evento; r: EstadoRegistro; conNombre: boolean }) {
+function Detalle({ ev, r }: { ev: Evento; r: EstadoRegistro }) {
   return (
     <section className="edc-reg">
-      {conNombre && (
-        <div className="between edc-regh">
-          <h2>{r.p.nombre}</h2>
-          <Link className="small noprint" to={`/e/${ev.id}/estado/p/${r.p.id}`}>Solo este registro</Link>
-        </div>
-      )}
+      <div className="between edc-regh">
+        <h2>{r.p.nombre}</h2>
+        <span className="small muted">{tipoRegistro(r)}{r.p.grupo && ` · ${r.p.grupo}`}</span>
+      </div>
       <div className="edc-s">
         <h3>Conceptos</h3>
         {r.conceptos.length ? (

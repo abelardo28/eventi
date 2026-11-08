@@ -48,7 +48,7 @@ export function Evento() {
           <div className="evacc">
             {puede(usuario, 'evento.editar', ev.id) && <button className="btn sm ghost" onClick={() => setEditar(true)}><IcEdit />Editar evento</button>}
             {puede(usuario, 'datos.importar', ev.id) && <button className="btn sm ghost" onClick={() => setImportar(true)}><IcUpload />Importar Excel</button>}
-            {ev.personas.length > 0 && <Link className="btn sm ghost" to={`/e/${ev.id}/estado/e/todo`}><IcReceipt />Estado de cuenta</Link>}
+            {ev.personas.length > 0 && <Link className="btn sm ghost" to={`/e/${ev.id}/estado`}><IcReceipt />Estado de cuenta</Link>}
           </div>
         )}
       </section>

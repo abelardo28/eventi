@@ -14,7 +14,7 @@ export interface DatosEstado {
   registros: EstadoRegistro[]
   /** Solo en el estado de cuenta de un grupo. */
   totales: { total: number; pagado: number; saldo: number; vencido: number } | null
-  ambito?: 'grupo' | 'evento'
+  ambito?: 'grupo' | 'evento' | 'seleccion'
   grupos?: SubtotalGrupo[]
 }
 
@@ -89,8 +89,8 @@ export function estadoPdf(d: DatosEstado): Blob {
   const subtitulo = (s: string) => { espacio(80); texto(s.toUpperCase(), M, 8, { color: GRIS, bold: true }); y += 4 }
   const conNota = (a: string, b: string) => `${a}\n${b}`
 
-  if (d.totales) {
-    const evento = d.ambito === 'evento'
+  if (d.totales && d.registros.length > 1) {
+    const evento = d.ambito !== 'grupo'
     if (d.grupos?.length) {
       texto('Por grupo', M, 12, { bold: true }); y += 4
       tabla([['GRUPO', 'TOTAL', 'PAGADO', 'SALDO']],
@@ -100,18 +100,16 @@ export function estadoPdf(d: DatosEstado): Blob {
     texto(evento ? 'Resumen por registro' : 'Resumen del grupo', M, 12, { bold: true }); y += 4
     tabla([['REGISTRO', 'TOTAL', 'PAGADO', 'SALDO']],
       d.registros.map(r => [conNota(r.p.nombre, tipoRegistro(r) + (evento && r.p.grupo ? ` · ${r.p.grupo}` : '') + (r.vencido > 0 ? ` · vencido ${money(r.vencido)}` : '')), money(r.total), money(r.pagado), money(r.saldo)]),
-      [[evento ? 'Total del evento' : 'Total del grupo', money(d.totales.total), money(d.totales.pagado), money(d.totales.saldo)]])
+      [[d.ambito === 'evento' ? 'Total del evento' : d.ambito === 'seleccion' ? 'Total de la selección' : 'Total del grupo', money(d.totales.total), money(d.totales.pagado), money(d.totales.saldo)]])
     y += 6
   }
 
   d.registros.forEach((r, i) => {
-    if (d.totales) {
-      espacio(170)
-      if (i > 0 || d.totales) { doc.setDrawColor(...LINEA).setLineWidth(1.2).line(M, y, W - M, y); y += 20 }
-      texto(r.p.nombre, M, 13, { bold: true })
-      texto(tipoRegistro(r), W - M, 9, { color: GRIS, align: 'right' })
-      y += 16
-    }
+    espacio(170)
+    if (d.registros.length > 1 || i > 0) { doc.setDrawColor(...LINEA).setLineWidth(1.2).line(M, y, W - M, y); y += 20 }
+    texto(r.p.nombre, M, 13, { bold: true })
+    texto(tipoRegistro(r) + (r.p.grupo ? ` · ${r.p.grupo}` : ''), W - M, 9, { color: GRIS, align: 'right' })
+    y += 16
     subtitulo('Conceptos')
     if (r.conceptos.length) {
       tabla([['CONCEPTO', 'TOTAL', 'PAGADO', 'SALDO']],

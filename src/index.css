@@ -320,10 +320,6 @@ button.cuota:active{transform:scale(.97)}
 .cargando{min-height:60vh;display:grid;place-items:center;color:var(--muted);font-weight:600}
 
 /* Estado de cuenta */
-.col-acc{display:flex;flex-direction:column;gap:6px;align-items:stretch}
-.grupo-d{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-.edc-link{display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-weight:700;color:var(--accent);text-decoration:none;font-size:12.5px}
-.edc-link svg{width:14px;height:14px}
 .ok-t{color:var(--mint)} .bad-t{color:var(--bad)}
 .edc{display:flex;flex-direction:column;gap:20px;width:100%;box-sizing:border-box}
 .edc-h{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--line)}
@@ -340,7 +336,6 @@ button.cuota:active{transform:scale(.97)}
 .edc-reg{display:flex;flex-direction:column;gap:14px}
 .edc-t.ab th:nth-child(2){text-align:left}
 .edc-reg + .edc-reg,.edc-s + .edc-reg{padding-top:18px;border-top:2px solid var(--line)}
-.edc-regh a{color:var(--accent);font-weight:600}
 .edc-t{width:100%;border-collapse:collapse;font-size:13.5px}
 .edc-t th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:6px 6px 6px 0;border-bottom:1px solid var(--line)}
 .edc-t td{padding:8px 6px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
@@ -364,3 +359,10 @@ button.cuota:active{transform:scale(.97)}
 }
 .recordar{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer;user-select:none}
 .recordar input{width:18px;height:18px;margin:0;accent-color:var(--accent)}
+.sel-reg{display:grid;gap:0 28px}
+@media (min-width:900px){.sel-reg{grid-template-columns:repeat(2,minmax(0,1fr))}.sel-reg > .sel-g{grid-column:1/-1}}
+.sel-g,.sel-p{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;cursor:pointer;user-select:none}
+.sel-g{padding:14px 2px 6px;font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.sel-p{padding:9px 2px;border-bottom:1px solid var(--line)}
+.sel-p .sub{font-size:12px;color:var(--muted)}
+.sel-g input,.sel-p input{width:18px;height:18px;margin:0;accent-color:var(--accent)}
