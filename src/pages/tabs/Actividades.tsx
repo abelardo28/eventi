@@ -4,17 +4,18 @@ import { disponible, repartido } from '../../domain/reparto'
 import type { Evento } from '../../domain/types'
 import { useStore } from '../../data/store'
 import { puede } from '../../domain/permisos'
-import { IcPlus } from '../../ui/icons'
+import { IcEdit, IcPlus } from '../../ui/icons'
 import { Bar } from '../../ui/kit'
-import { ActividadSheet, MovimientoSheet, RepartoSheet } from '../../sheets/ActividadSheets'
+import { ActividadSheet, EditarActividadSheet, MovimientoSheet, RepartoSheet } from '../../sheets/ActividadSheets'
 
 const signo = (n: number) => (n >= 0 ? '+' : '−') + money(Math.abs(n))
 
 export function TabActividades({ ev }: { ev: Evento }) {
   const { usuario } = useStore()
   const movs = puede(usuario, 'actividades.movimientos', ev.id)
+  const admin = puede(usuario, 'actividades.crear', ev.id)
   const abonar = movs && puede(usuario, 'abonos.registrar', ev.id)
-  const [sheet, setSheet] = useState<{ t: 'nueva' } | { t: 'mov'; id: string; tipo: 'gasto' | 'ingreso' } | { t: 'reparto'; id: string } | null>(null)
+  const [sheet, setSheet] = useState<{ t: 'nueva' } | { t: 'mov'; id: string; tipo: 'gasto' | 'ingreso' } | { t: 'reparto'; id: string } | { t: 'editar'; id: string } | null>(null)
   const gast = totalGastado(ev), rec = totalRecuperado(ev)
   const max = Math.max(1, ...ev.actividades.flatMap(a => [gastado(a), recuperado(a)]))
 
@@ -40,7 +41,10 @@ export function TabActividades({ ev }: { ev: Evento }) {
           <section key={a.id} className="glass panel stack act">
             <div className="between">
               <div><h2>{a.nombre}</h2><div className="small muted">{a.detalle}</div></div>
-              <span className={`pill ${a.estado === 'En curso' ? 'warn' : 'neutral'}`}>{a.estado}</span>
+              <span className="row" style={{ gap: 6 }}>
+                <span className={`pill ${a.estado === 'En curso' ? 'warn' : 'neutral'}`}>{a.estado}</span>
+                {admin && <button className="iconbtn" aria-label={`Editar ${a.nombre}`} onClick={() => setSheet({ t: 'editar', id: a.id })}><IcEdit size={16} /></button>}
+              </span>
             </div>
             <div className="pair num">
               <span className="muted">Gastado</span><Bar value={(g / max) * 100} tone="bad" /><b>{money(g)}</b>
@@ -77,6 +81,7 @@ export function TabActividades({ ev }: { ev: Evento }) {
       {!ev.actividades.length && <div className="glass panel empty">Registra rifas, loterías o ventas para llevar lo que se gastó y lo que se recuperó.</div>}
       {puede(usuario, 'actividades.crear', ev.id) && <button className="btn ghost block" onClick={() => setSheet({ t: 'nueva' })}><IcPlus />Nueva actividad</button>}
       {sheet?.t === 'nueva' && <ActividadSheet ev={ev} onClose={() => setSheet(null)} />}
+      {sheet?.t === 'editar' && <EditarActividadSheet ev={ev} actividadId={sheet.id} onClose={() => setSheet(null)} />}
       {sheet?.t === 'reparto' && <RepartoSheet ev={ev} actividadId={sheet.id} onClose={() => setSheet(null)} />}
       {sheet?.t === 'mov' && <MovimientoSheet ev={ev} actividadId={sheet.id} tipo={sheet.tipo} onClose={() => setSheet(null)} />}
     </div>

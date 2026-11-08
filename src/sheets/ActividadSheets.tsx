@@ -3,7 +3,8 @@ import { useStore } from '../data/store'
 import { uid } from '../data/uid'
 import { cargo, concepto, money, plural } from '../domain/calc'
 import { abonosDeReparto, disponible, partes, saldo } from '../domain/reparto'
-import type { Evento, Movimiento } from '../domain/types'
+import type { Actividad, Evento, Movimiento } from '../domain/types'
+import { IcClose, IcTrash } from '../ui/icons'
 import { Chips, Toggle } from '../ui/kit'
 import { Sheet, useToast } from '../ui/overlay'
 
@@ -145,6 +146,67 @@ export function RepartoSheet({ ev, actividadId, onClose }: { ev: Evento; activid
         {monto > 0 && elegidos.length > 0 && <div className="small muted">Se registra un abono de {concepto(ev, cid)?.nombre} para cada persona elegida. {monto < disp ? `Quedan ${money(disp - monto)} de ganancia para después.` : 'Se usa toda la ganancia.'}</div>}
         <button className="btn block" type="submit" disabled={!(monto > 0) || !elegidos.length}>Abonar {monto > 0 ? money(monto) : ''}</button>
       </>}
+    </Sheet>
+  )
+}
+
+/** Editar nombre, detalle, estado y movimientos de una actividad, o borrarla (solo administrador). */
+export function EditarActividadSheet({ ev, actividadId, onClose }: { ev: Evento; actividadId: string; onClose: () => void }) {
+  const { editarEvento } = useStore()
+  const { toast } = useToast()
+  const a = ev.actividades.find(x => x.id === actividadId)
+  const [nombre, setNombre] = useState(a?.nombre ?? '')
+  const [detalle, setDetalle] = useState(a?.detalle ?? '')
+  const [estado, setEstado] = useState<Actividad['estado']>(a?.estado ?? 'En curso')
+  const [movs, setMovs] = useState<Movimiento[]>(a?.movimientos ?? [])
+  const [borrar, setBorrar] = useState(false)
+  if (!a) return null
+  const abonados = ev.abonos.filter(x => x.actividadId === a.id)
+  const totalAbonado = abonados.reduce((s, x) => s + x.monto, 0)
+
+  const guardar = () => {
+    if (!nombre.trim()) { toast('Ponle nombre a la actividad'); return }
+    const ok = editarEvento(ev.id, e => {
+      const x = e.actividades.find(y => y.id === a.id)
+      if (x) Object.assign(x, { nombre: nombre.trim(), detalle: detalle.trim(), estado, movimientos: movs })
+    })
+    if (ok) { toast('Actividad actualizada'); onClose() }
+  }
+  const eliminar = () => {
+    const ok = editarEvento(ev.id, e => {
+      e.actividades = e.actividades.filter(y => y.id !== a.id)
+      e.abonos = e.abonos.filter(y => y.actividadId !== a.id)
+    })
+    if (ok) { toast(`${a.nombre} borrada`); onClose() }
+  }
+
+  return (
+    <Sheet title={`Editar ${a.nombre}`} onClose={onClose} onSubmit={guardar}>
+      <label className="f">Nombre<input className="inp" id="ea-n" value={nombre} onChange={e => setNombre(e.target.value)} autoFocus /></label>
+      <label className="f">Detalle<input className="inp" id="ea-d" value={detalle} onChange={e => setDetalle(e.target.value)} placeholder="Premio o descripción" /></label>
+      <div className="f">Estado<Chips options={['En curso', 'Terminada'] as const} value={estado} onChange={setEstado} /></div>
+      <div className="f">Movimientos
+        {!movs.length && <span className="small muted">Sin movimientos.</span>}
+        {movs.map(m => (
+          <div key={m.id} className="abono" style={{ alignItems: 'center' }}>
+            <span className="small">{m.nota || (m.tipo === 'gasto' ? 'Gasto' : 'Ingreso')}<div className="muted">{m.fecha}</div></span>
+            <span className="row" style={{ gap: 6 }}>
+              <b className={`num small ${m.tipo === 'gasto' ? 'neg' : 'pos'}`}>{m.tipo === 'gasto' ? '−' : '+'}{money(m.monto)}</b>
+              <button type="button" className="iconbtn sm" aria-label={`Quitar ${m.nota || m.tipo} de ${money(m.monto)}`} onClick={() => setMovs(xs => xs.filter(y => y.id !== m.id))}><IcClose size={14} /></button>
+            </span>
+          </div>
+        ))}
+      </div>
+      <button className="btn block" type="submit">Guardar cambios</button>
+      {borrar ? (
+        <div className="confirm">
+          <span>¿Borrar «{a.nombre}» con sus {plural(a.movimientos.length, 'movimiento', 'movimientos')}?{abonados.length > 0 && ` También se quitan los ${plural(abonados.length, 'abono', 'abonos')} (${money(totalAbonado)}) que se hicieron con su ganancia.`} No se puede deshacer.</span>
+          <div className="row">
+            <button type="button" className="btn sm danger" onClick={eliminar}><IcTrash />Sí, borrar</button>
+            <button type="button" className="btn sm ghost" onClick={() => setBorrar(false)}>Cancelar</button>
+          </div>
+        </div>
+      ) : <button type="button" className="linkbtn small danger" style={{ alignSelf: 'flex-start' }} onClick={() => setBorrar(true)}>Borrar actividad</button>}
     </Sheet>
   )
 }
