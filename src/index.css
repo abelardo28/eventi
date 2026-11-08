@@ -325,7 +325,7 @@ button.cuota:active{transform:scale(.97)}
 .edc-link{display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-weight:700;color:var(--accent);text-decoration:none;font-size:12.5px}
 .edc-link svg{width:14px;height:14px}
 .ok-t{color:var(--mint)} .bad-t{color:var(--bad)}
-.edc{display:flex;flex-direction:column;gap:20px;max-width:860px;margin-inline:auto;width:100%;box-sizing:border-box}
+.edc{display:flex;flex-direction:column;gap:20px;width:100%;box-sizing:border-box}
 .edc-h{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--line)}
 .edc-h h1{font-family:var(--display);font-size:26px;margin:4px 0 2px;letter-spacing:-.02em}
 .edc-h .meta{color:var(--muted);font-size:13px}

@@ -60,6 +60,11 @@ $$;
 
 grant execute on function public.guardar_suscripcion(text, text, text), public.quitar_suscripcion(text) to authenticated;
 
+-- La función eventi-push entra con la llave de servicio: los proyectos nuevos no le dan acceso solo
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.push_cola, public.push_suscripciones, public.push_config to service_role;
+grant usage, select on sequence public.push_cola_id_seq to service_role;
+
 -- ─── Qué avisar cuando cambia un evento ──────────────────────────────────────
 create or replace function public.dinero(n numeric) returns text
 language sql immutable as $$
