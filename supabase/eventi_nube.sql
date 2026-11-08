@@ -178,9 +178,13 @@ begin
   where id = p_evento;
 end $$;
 
+-- ─── Acceso de la app (los proyectos nuevos de Supabase no lo dan solo) ────
+grant usage on schema public to anon, authenticated;
+grant select, update on public.perfiles to authenticated;
+grant select, insert, update, delete on public.eventos to authenticated;
+grant execute on function public.es_admin(), public.es_staff_de(text), public.es_staff(), public.tel10(text),
+  public.mis_eventos(), public.proponer_abono(text, jsonb) to authenticated;
 revoke all on function public.vincular_por_telefono(uuid, text) from public, anon, authenticated;
-grant execute on function public.mis_eventos() to authenticated;
-grant execute on function public.proponer_abono(text, jsonb) to authenticated;
 
 -- ─── Comprobantes (bucket privado) ───────────────────────────────────────────
 insert into storage.buckets (id, name, public)
