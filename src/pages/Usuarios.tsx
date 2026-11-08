@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useStore } from '../data/store'
 import { misRegistros, puede, ROLES } from '../domain/permisos'
 import type { Rol, Usuario } from '../domain/types'
-import { IcPlus } from '../ui/icons'
+import { IcPlus, IcEdit } from '../ui/icons'
 import { Avatar, Topbar } from '../ui/kit'
 import { UsuarioSheet } from '../sheets/UsuarioSheet'
 
@@ -49,6 +49,7 @@ export function Usuarios() {
                 <span className="stack" style={{ gap: 4, alignItems: 'flex-end' }}>
                   <span className={`pill ${u.rol === 'admin' ? 'warn' : u.rol === 'capturista' ? 'ok' : 'neutral'}`}>{ROLES[u.rol].nombre}</span>
                   {!u.activo && <span className="pill bad">Desactivado</span>}
+                  <span className="small muted row" style={{ gap: 4 }}><IcEdit size={14} />Editar</span>
                 </span>
               </button>
             )

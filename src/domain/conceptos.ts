@@ -9,7 +9,8 @@ export interface BorradorConcepto {
   porEdad: boolean
   adulto: number
   menor: number
-  cuotas: { fecha: string; pct: number }[]
+  /** `monto` presente = monto fijo por registro en vez de porcentaje. */
+  cuotas: { fecha: string; pct: number; monto?: number }[]
 }
 
 export const borradorDe = (c: Concepto): BorradorConcepto => ({
@@ -29,18 +30,45 @@ export function problemaConcepto(b: BorradorConcepto, otros: string[]): string |
   if (b.porEdad && b.menor < 0) return 'El monto por menor no puede ser negativo.'
   if (!b.cuotas.length) return `${nombre} necesita al menos una fecha de pago.`
   if (b.cuotas.some(q => !q.fecha)) return `Falta una fecha de pago en ${nombre}.`
-  if (b.cuotas.some(q => !(q.pct > 0))) return `Cada pago de ${nombre} debe tener un porcentaje mayor a 0.`
-  const suma = b.cuotas.reduce((s, q) => s + q.pct, 0)
-  if (suma !== 100) return `Los pagos de ${nombre} suman ${suma}%; deben sumar 100%.`
+  const orden = ordenadas(b.cuotas)
+  if (orden.length === 1 && orden[0].monto != null) return null
+  if (orden.length === 1 || !orden.some(q => q.monto != null)) {
+    if (orden.some(q => !(q.pct > 0))) return `Cada pago de ${nombre} debe tener un porcentaje mayor a 0.`
+    const suma = orden.reduce((s, q) => s + q.pct, 0)
+    if (suma !== 100) return `Los pagos de ${nombre} suman ${suma}%; deben sumar 100%.`
+    return null
+  }
+  // Con montos fijos el último pago (por fecha) cubre lo que falte
+  const antes = orden.slice(0, -1)
+  if (antes.some(q => (q.monto != null ? !(q.monto > 0) : !(q.pct > 0)))) return `Cada pago de ${nombre} debe tener un porcentaje o un monto mayor a 0.`
+  const suma = antes.reduce((s, q) => s + (q.monto != null ? 0 : q.pct), 0)
+  if (suma >= 100) return `Los porcentajes de ${nombre} ya suman ${suma}%; deja algo para el último pago.`
   return null
+}
+
+const ordenadas = <T extends { fecha: string }>(xs: T[]) => xs.slice().sort((x, y) => x.fecha.localeCompare(y.fecha))
+
+/** Índice (en el formulario) del pago con la fecha más tardía: con montos fijos es el que cubre lo que falte. */
+export function indiceUltimo(cuotas: { fecha: string }[]): number {
+  let k = 0
+  cuotas.forEach((q, i) => { if (q.fecha >= cuotas[k].fecha) k = i })
+  return k
 }
 
 export function aConcepto(b: BorradorConcepto, id: string): Concepto {
   return {
     id, nombre: b.nombre.trim(), base: b.adulto,
     tarifa: b.porEdad ? { adulto: b.adulto, menor: b.menor } : null,
-    cuotas: b.cuotas.slice().sort((x, y) => x.fecha.localeCompare(y.fecha)).map(q => ({ fecha: q.fecha, pct: q.pct })),
+    cuotas: aCuotas(b.cuotas),
   }
+}
+
+function aCuotas(xs: BorradorConcepto['cuotas']): Concepto['cuotas'] {
+  const orden = ordenadas(xs)
+  if (orden.length === 1 && orden[0].monto != null) return [{ fecha: orden[0].fecha, pct: 100 }]
+  if (orden.length === 1 || !orden.some(q => q.monto != null)) return orden.map(q => ({ fecha: q.fecha, pct: q.pct }))
+  return orden.map((q, i) => (i === orden.length - 1 ? { fecha: q.fecha, pct: 0 }
+    : q.monto != null ? { fecha: q.fecha, pct: 0, monto: q.monto } : { fecha: q.fecha, pct: q.pct }))
 }
 
 /** ¿El monto del cargo es el que da la tarifa (no se ajustó a mano)? */

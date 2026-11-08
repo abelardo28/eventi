@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Evento } from './types'
-import { actualizarConcepto, aConcepto, borradorDe, eliminarConcepto, problemaConcepto } from './conceptos'
+import { actualizarConcepto, aConcepto, borradorDe, eliminarConcepto, problemaConcepto, type BorradorConcepto } from './conceptos'
+import { etiquetaCuota, plan } from './calc'
 
 const ev = (): Evento => ({
   id: 'e', nombre: 'T', fecha: '2026-12-01', lugar: '', actividades: [], envios: [],
@@ -40,5 +41,34 @@ describe('editar conceptos', () => {
     e.abonos = []
     expect(eliminarConcepto(e, 'h')).toBe(true)
     expect(e.personas[0].cargos).toEqual([])
+  })
+})
+
+describe('pagos con monto fijo', () => {
+  const b = (cuotas: BorradorConcepto['cuotas']): BorradorConcepto => ({ nombre: 'Hospedaje', porEdad: false, adulto: 2500, menor: 0, cuotas })
+
+  it('un anticipo fijo y el último pago cubre lo que falte', () => {
+    const borr = b([{ fecha: '2026-12-01', pct: 60 }, { fecha: '2026-11-01', pct: 0, monto: 500 }])
+    expect(problemaConcepto(borr, [])).toBeNull()
+    const c = aConcepto(borr, 'c')
+    expect(c.cuotas).toEqual([{ fecha: '2026-11-01', pct: 0, monto: 500 }, { fecha: '2026-12-01', pct: 0 }])
+    expect(plan(c, 2500).map(x => x.monto)).toEqual([500, 2000])
+    expect(plan(c, 8000).map(x => x.monto)).toEqual([500, 7500])
+    expect(plan(c, 300).map(x => x.monto)).toEqual([300, 0])
+    expect([0, 1].map(i => etiquetaCuota(c, i))).toEqual(['$500', 'resto'])
+  })
+
+  it('mezcla porcentaje y monto fijo', () => {
+    const c = aConcepto(b([{ fecha: '2026-10-01', pct: 40 }, { fecha: '2026-11-01', pct: 0, monto: 500 }, { fecha: '2026-12-01', pct: 0 }]), 'c')
+    expect(plan(c, 2500).map(x => x.monto)).toEqual([1000, 500, 1000])
+    expect(etiquetaCuota(c, 0)).toBe('40%')
+  })
+
+  it('valida montos y porcentajes', () => {
+    expect(problemaConcepto(b([{ fecha: '2026-11-01', pct: 0, monto: 0 }, { fecha: '2026-12-01', pct: 0 }]), [])).toMatch(/mayor a 0/)
+    expect(problemaConcepto(b([{ fecha: '2026-10-01', pct: 100 }, { fecha: '2026-11-01', pct: 0, monto: 500 }, { fecha: '2026-12-01', pct: 0 }]), [])).toMatch(/deja algo/)
+    // Un solo pago siempre es el 100%
+    expect(problemaConcepto(b([{ fecha: '2026-11-01', pct: 100, monto: 500 }]), [])).toBeNull()
+    expect(aConcepto(b([{ fecha: '2026-11-01', pct: 100, monto: 500 }]), 'c').cuotas).toEqual([{ fecha: '2026-11-01', pct: 100 }])
   })
 })

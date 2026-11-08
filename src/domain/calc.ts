@@ -20,14 +20,29 @@ export function repartirPct(n: number): number[] {
 
 export interface PagoProgramado { fecha: ISODate; monto: number }
 
-/** Reparte el total de un cargo en las fechas del concepto (redondeado a $50; el último pago absorbe la diferencia). */
+/** ¿Algún pago del concepto es un monto fijo? Entonces el último pago es "lo que falte". */
+export const conMontoFijo = (c: Pick<Concepto, 'cuotas'>) => c.cuotas.some(q => q.monto != null)
+
+/**
+ * Reparte el total de un cargo en las fechas del concepto: por porcentaje (redondeado a $50) o por monto fijo.
+ * Ningún pago pasa de lo que falta y el último absorbe la diferencia.
+ */
 export function plan(c: Concepto, monto: number): PagoProgramado[] {
   let acc = 0
   return c.cuotas.map((q, i) => {
-    const m = i === c.cuotas.length - 1 ? monto - acc : Math.round((monto * q.pct) / 100 / 50) * 50
+    const falta = Math.max(0, monto - acc)
+    const m = i === c.cuotas.length - 1 ? falta
+      : Math.min(falta, q.monto != null ? q.monto : Math.round((monto * q.pct) / 100 / 50) * 50)
     acc += m
     return { fecha: q.fecha, monto: m }
   })
+}
+
+/** Cómo se cobra cada fecha: "40%", "$500" o "resto". */
+export function etiquetaCuota(c: Concepto, i: number): string {
+  const q = c.cuotas[i]
+  if (conMontoFijo(c) && i === c.cuotas.length - 1) return 'resto'
+  return q.monto != null ? money(q.monto) : `${q.pct}%`
 }
 
 export function composicion(g: Cargo): string {

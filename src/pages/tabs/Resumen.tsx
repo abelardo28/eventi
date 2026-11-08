@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useStore } from '../../data/store'
-import { cargo, concepto, debido, esperado, money, pagado, pct, plan, plural, porValidar, totalGastado, totalRecuperado, vencido } from '../../domain/calc'
+import { cargo, concepto, debido, esperado, etiquetaCuota, money, pagado, pct, plan, plural, porValidar, totalGastado, totalRecuperado, vencido } from '../../domain/calc'
 import { puede } from '../../domain/permisos'
 import { AbonoPendiente } from '../../ui/Pendientes'
 import { addDays, fCorta } from '../../domain/fechas'
@@ -94,7 +94,7 @@ export function TabResumen({ ev }: { ev: Evento }) {
             <div key={x.c.id + x.i} className="item" style={{ gridTemplateColumns: '46px 1fr auto' }}>
               <DateBadge fecha={x.q.fecha} />
               <span><span className="name">{x.c.nombre}</span>
-                <div className="sub">Pago {x.i + 1} de {x.c.cuotas.length} ({x.q.pct}%) · aviso el {fCorta(addDays(x.q.fecha, -ev.recordatorios.diasAntes))}</div></span>
+                <div className="sub">Pago {x.i + 1} de {x.c.cuotas.length} ({etiquetaCuota(x.c, x.i)}) · aviso el {fCorta(addDays(x.q.fecha, -ev.recordatorios.diasAntes))}</div></span>
               <b className="num">{money(x.total)}</b>
             </div>
           ))}

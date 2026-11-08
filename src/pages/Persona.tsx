@@ -58,6 +58,7 @@ export function Persona() {
           <div className="meta">{participante ? ev.nombre : `${p.tipo} · ${p.telefono || 'Sin WhatsApp'}`}</div>
           {(p.grupo || p.nota) && <div className="meta">{[p.grupo && `Grupo: ${p.grupo}`, p.nota].filter(Boolean).join(' · ')}</div>}
         </div>
+        {can('personas.gestionar') && <button className="btn sm ghost" onClick={() => setSheet({ t: 'editar' })}><IcEdit />Editar datos</button>}
       </section>
 
       <div className="stack-lg deck">

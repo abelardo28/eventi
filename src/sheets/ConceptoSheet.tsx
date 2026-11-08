@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../data/store'
 import { uid } from '../data/uid'
 import { money, plural, repartirPct } from '../domain/calc'
-import { abonosDeConcepto, aConcepto, actualizarConcepto, borradorDe, cuotasMensuales, eliminarConcepto, problemaConcepto, type BorradorConcepto } from '../domain/conceptos'
+import { abonosDeConcepto, aConcepto, actualizarConcepto, borradorDe, cuotasMensuales, eliminarConcepto, indiceUltimo, problemaConcepto, type BorradorConcepto } from '../domain/conceptos'
 import { addDays, addMonths } from '../domain/fechas'
 import type { Cargo, Concepto, Evento } from '../domain/types'
 import { IcClose, IcPlus, IcTrash } from '../ui/icons'
@@ -13,14 +13,19 @@ import { Sheet, useToast } from '../ui/overlay'
 export function ConceptoCampos({ b, onChange, idp }: { b: BorradorConcepto; onChange: (b: BorradorConcepto) => void; idp: string }) {
   const set = (patch: Partial<BorradorConcepto>) => onChange({ ...b, ...patch })
   const setCuota = (i: number, patch: Partial<BorradorConcepto['cuotas'][number]>) => set({ cuotas: b.cuotas.map((q, j) => (j === i ? { ...q, ...patch } : q)) })
-  const suma = b.cuotas.reduce((s, q) => s + (q.pct || 0), 0)
+  const mixto = b.cuotas.length > 1 && b.cuotas.some(q => q.monto != null)
+  const ultimo = indiceUltimo(b.cuotas)
+  const suma = b.cuotas.reduce((s, q, i) => s + (q.monto != null || (mixto && i === ultimo) ? 0 : q.pct || 0), 0)
   const agregarPago = () => {
-    const ultima = b.cuotas[b.cuotas.length - 1]?.fecha
+    const ultima = b.cuotas[ultimo]?.fecha
     const cuotas = [...b.cuotas, { fecha: ultima ? addMonths(ultima, 1) : '', pct: 0 }]
+    if (mixto) { set({ cuotas }); return }
     const pcts = repartirPct(cuotas.length)
     set({ cuotas: cuotas.map((q, i) => ({ ...q, pct: pcts[i] })) })
   }
-  const repartir = () => { const pcts = repartirPct(b.cuotas.length); set({ cuotas: b.cuotas.map((q, i) => ({ ...q, pct: pcts[i] })) }) }
+  const repartir = () => { const pcts = repartirPct(b.cuotas.length); set({ cuotas: b.cuotas.map((q, i) => ({ fecha: q.fecha, pct: pcts[i] })) }) }
+  // Cambiar un pago entre porcentaje y monto fijo
+  const modo = (i: number, fijo: boolean) => setCuota(i, fijo ? { monto: b.cuotas[i].monto ?? 0, pct: 0 } : { monto: undefined, pct: 0 })
 
   return (
     <>
@@ -36,21 +41,36 @@ export function ConceptoCampos({ b, onChange, idp }: { b: BorradorConcepto; onCh
           <input className="inp num" id={`${idp}-m`} type="number" inputMode="numeric" min={0} value={b.menor || ''} onChange={e => set({ menor: +e.target.value })} /></label>}
       </div>
       <div className="stack" style={{ gap: 8 }}>
-        <div className="between"><span className="f">Fechas de pago</span>
-          <span className={`small num ${suma === 100 ? 'muted' : 'neg'}`}>Suma {suma}%</span></div>
-        {b.cuotas.map((q, i) => (
-          <div key={i} className="row" style={{ gap: 6 }}>
-            <input className="inp" style={{ flex: 1 }} type="date" id={`${idp}-f${i}`} value={q.fecha} aria-label={`Fecha del pago ${i + 1}`} onChange={e => setCuota(i, { fecha: e.target.value })} />
-            <span className="row" style={{ gap: 4, width: 92 }}>
-              <input className="inp num" type="number" inputMode="numeric" min={1} max={100} id={`${idp}-p${i}`} value={q.pct || ''} aria-label={`Porcentaje del pago ${i + 1}`} onChange={e => setCuota(i, { pct: +e.target.value })} />
-              <span className="small muted">%</span>
-            </span>
-            <button type="button" className="iconbtn" aria-label={`Quitar pago ${i + 1}`} disabled={b.cuotas.length === 1} onClick={() => set({ cuotas: b.cuotas.filter((_, j) => j !== i) })}><IcClose size={16} /></button>
-          </div>
-        ))}
+        <div className="between" style={{ gap: 12, alignItems: 'flex-start' }}><span className="f" style={{ whiteSpace: 'nowrap' }}>Fechas de pago</span>
+          {mixto
+            ? <span className={`small num ${suma < 100 ? 'muted' : 'neg'}`}>{suma > 0 ? `Porcentajes ${suma}% · ` : ''}el último cubre lo que falte</span>
+            : <span className={`small num ${suma === 100 ? 'muted' : 'neg'}`}>Suma {suma}%</span>}</div>
+        {b.cuotas.map((q, i) => {
+          const resto = mixto && i === ultimo, fijo = q.monto != null
+          return (
+            <div key={i} className="cuota-ed">
+              <input className="inp" type="date" id={`${idp}-f${i}`} value={q.fecha} aria-label={`Fecha del pago ${i + 1}`} onChange={e => setCuota(i, { fecha: e.target.value })} />
+              {resto
+                ? <span className="small muted resto">Lo que falte</span>
+                : <>
+                  {b.cuotas.length > 1 && (
+                    <span className="seg" role="group" aria-label={`Cómo se cobra el pago ${i + 1}`}>
+                      <button type="button" aria-pressed={!fijo} onClick={() => modo(i, false)}>%</button>
+                      <button type="button" aria-pressed={fijo} id={`${idp}-fijo${i}`} onClick={() => modo(i, true)}>$</button>
+                    </span>
+                  )}
+                  {fijo
+                    ? <input className="inp num" type="number" inputMode="decimal" min={1} id={`${idp}-p${i}`} value={q.monto || ''} placeholder="$" aria-label={`Monto del pago ${i + 1}`} onChange={e => setCuota(i, { monto: +e.target.value })} />
+                    : <input className="inp num" type="number" inputMode="numeric" min={1} max={100} id={`${idp}-p${i}`} value={q.pct || ''} placeholder="%" aria-label={`Porcentaje del pago ${i + 1}`} onChange={e => setCuota(i, { pct: +e.target.value })} />}
+                </>}
+              <button type="button" className="iconbtn" aria-label={`Quitar pago ${i + 1}`} disabled={b.cuotas.length === 1} onClick={() => { const resto = b.cuotas.filter((_, j) => j !== i); set({ cuotas: resto.length === 1 ? [{ fecha: resto[0].fecha, pct: 100 }] : resto }) }}><IcClose size={16} /></button>
+            </div>
+          )
+        })}
+        {mixto && <div className="small faint">El monto fijo es por registro: lo mismo para una persona que para una familia.</div>}
         <div className="row wrap">
           <button type="button" className="btn sm ghost" onClick={agregarPago}><IcPlus />Agregar pago</button>
-          {suma !== 100 && <button type="button" className="btn sm ghost" onClick={repartir}>Repartir en partes iguales</button>}
+          {(mixto || suma !== 100) && <button type="button" className="btn sm ghost" onClick={repartir}>Repartir en porcentajes iguales</button>}
         </div>
       </div>
     </>

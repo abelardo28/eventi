@@ -4,6 +4,8 @@ export interface Cuota {
   fecha: ISODate
   /** Porcentaje del total de cada cargo que vence en esta fecha. */
   pct: number
+  /** Monto fijo por registro (persona o familia) en lugar de porcentaje. Si algún pago lo usa, el último cubre lo que falte. */
+  monto?: number
 }
 
 export interface Tarifa {

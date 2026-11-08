@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../../data/store'
-import { avancePago, cargo, composicion, esperado, money, pagado, pct, plural } from '../../domain/calc'
+import { avancePago, cargo, composicion, esperado, etiquetaCuota, money, pagado, pct, plural } from '../../domain/calc'
 import { fCorta } from '../../domain/fechas'
 import type { Concepto, Evento } from '../../domain/types'
 import { puede } from '../../domain/permisos'
@@ -70,7 +70,7 @@ function TarjetaConcepto({ ev, c, hoy, onEditar }: { ev: Evento; c: Concepto; ho
       <div className="cuotas">
         {c.cuotas.map((q, i) => {
           const n = asign.filter(x => avancePago(ev, x, c, i).completo).length
-          return chip(i, `${fCorta(q.fecha)} · ${q.pct}%`, n, q.fecha < hoy ? (n < asign.length ? 'late' : 'paid') : '', 'cubrieron')
+          return chip(i, `${fCorta(q.fecha)} · ${etiquetaCuota(c, i)}`, n, q.fecha < hoy ? (n < asign.length ? 'late' : 'paid') : '', 'cubrieron')
         })}
         {c.cuotas.length > 1 && (() => {
           const n = asign.filter(x => avancePago(ev, x, c, null).completo).length
