@@ -5,7 +5,7 @@ import { concepto, integrantes, money, plural, totalPersona } from '../domain/ca
 import { estadoGrupo, subtotalesPorGrupo, tipoRegistro, type EstadoRegistro, type SubtotalGrupo } from '../domain/estadoCuenta'
 import { fCompleta, fCorta } from '../domain/fechas'
 import { formaDePago } from '../domain/reparto'
-import { puede } from '../domain/permisos'
+import { puede, puedeVerPersona } from '../domain/permisos'
 import type { Evento } from '../domain/types'
 import { Topbar } from '../ui/kit'
 import { IcUpload } from '../ui/icons'
@@ -32,9 +32,13 @@ export function EstadoCuenta() {
   // null = todos los registros
   const [elegidos, setElegidos] = useState<Set<string> | null>(null)
   const ev = evento(id)
-  if (!ev || !puede(usuario, 'evento.ver', ev.id) || !ev.personas.length) return <NoEncontrado />
+  const participante = usuario?.rol === 'participante'
+  if (!ev || !(participante || puede(usuario, 'evento.ver', ev.id))) return <NoEncontrado />
+  // El participante solo ve (y elige entre) sus propios registros
+  const visibles = ev.personas.filter(p => puedeVerPersona(usuario, ev, p))
+  if (!visibles.length) return <NoEncontrado />
 
-  const orden = [...ev.personas].sort((a, b) => (a.grupo ?? '\uffff').localeCompare(b.grupo ?? '\uffff', 'es') || a.nombre.localeCompare(b.nombre, 'es'))
+  const orden = [...visibles].sort((a, b) => (a.grupo ?? '\uffff').localeCompare(b.grupo ?? '\uffff', 'es') || a.nombre.localeCompare(b.nombre, 'es'))
   const sel = elegidos ?? new Set(orden.map(p => p.id))
   const elegir = (ids: string[], v: boolean) => {
     const n = new Set(sel)
@@ -45,17 +49,17 @@ export function EstadoCuenta() {
   const porGrupo = [...new Set(orden.map(p => p.grupo ?? ''))].map(g => ({ g, ps: orden.filter(p => (p.grupo ?? '') === g) }))
 
   const incluidos = orden.filter(p => sel.has(p.id))
-  const todo = incluidos.length === orden.length
-  const unGrupo = !todo && incluidos.length > 0 && incluidos.every(p => p.grupo && p.grupo === incluidos[0].grupo) ? incluidos[0].grupo! : null
+  const todo = incluidos.length === orden.length && !participante
+  const unGrupo = !todo && !participante && incluidos.length > 0 && incluidos.every(p => p.grupo && p.grupo === incluidos[0].grupo) ? incluidos[0].grupo! : null
   const est = estadoGrupo(ev, incluidos, hoy)
   const registros: EstadoRegistro[] = est.registros
   const totales = est
   const ambito: 'grupo' | 'evento' | 'seleccion' = todo ? 'evento' : unGrupo ? 'grupo' : 'seleccion'
   const sg = unGrupo ? [] : subtotalesPorGrupo(registros)
-  const grupos: SubtotalGrupo[] = sg.length > 1 ? sg : []
+  const grupos: SubtotalGrupo[] = sg.length > 1 && !participante ? sg : []
   const cuantos = `${plural(incluidos.length, 'registro', 'registros')} · ${plural(incluidos.reduce((s, x) => s + integrantes(x), 0), 'persona', 'personas')}`
-  const titulo = unGrupo ?? ev.nombre
-  const sub = todo ? `Todo el evento · ${cuantos}` : unGrupo ? `Grupo · ${cuantos}` : `Selección · ${cuantos}`
+  const titulo = participante ? (incluidos.length === 1 ? incluidos[0].nombre : usuario!.nombre) : unGrupo ?? ev.nombre
+  const sub = participante ? `${incluidos.length === 1 ? 'Mi registro' : 'Mis registros'} · ${cuantos}` : todo ? `Todo el evento · ${cuantos}` : unGrupo ? `Grupo · ${cuantos}` : `Selección · ${cuantos}`
   const t = totales
   const tactil = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
 
@@ -63,7 +67,7 @@ export function EstadoCuenta() {
     if (!pdf || !incluidos.length) return
     let blob: Blob
     try { blob = pdf.estadoPdf({ ev, hoy, titulo, sub, registros, totales, ambito, grupos }) } catch { toast('No se pudo generar el PDF.'); return }
-    const nombre = pdf.nombreArchivo(unGrupo ? `${unGrupo} - ${ev.nombre}` : ev.nombre)
+    const nombre = pdf.nombreArchivo(participante || unGrupo ? `${titulo} - ${ev.nombre}` : ev.nombre)
     const archivo = new File([blob], nombre, { type: 'application/pdf' })
     // En el celular se abre el menú de compartir (Guardar en Archivos, WhatsApp, Imprimir…)
     if (tactil && navigator.canShare?.({ files: [archivo] })) {
@@ -78,13 +82,13 @@ export function EstadoCuenta() {
 
   return (
     <>
-      <div className="noprint"><Topbar back={`/e/${ev.id}`} /></div>
+      <div className="noprint"><Topbar back={participante ? '/' : `/e/${ev.id}`} /></div>
       <div className="row wrap noprint" style={{ justifyContent: 'flex-end', marginBottom: 12 }}>
         {!tactil && <button className="btn ghost" onClick={() => window.print()} disabled={!incluidos.length}>Imprimir</button>}
         <button className="btn" onClick={guardarPdf} disabled={!pdf || !incluidos.length}><IcUpload />{tactil ? 'Compartir o guardar PDF' : 'Descargar PDF'}</button>
       </div>
 
-      <section className="glass panel stack noprint" style={{ marginBottom: 14 }}>
+      {orden.length > 1 && <section className="glass panel stack noprint" style={{ marginBottom: 14 }}>
         <div className="between wrap">
           <span><b>¿A quién incluyo?</b><div className="small muted">{incluidos.length} de {plural(orden.length, 'registro', 'registros')}</div></span>
           <span className="row" style={{ gap: 6 }}>
@@ -112,7 +116,7 @@ export function EstadoCuenta() {
             </Fragment>
           ))}
         </div>
-      </section>
+      </section>}
       {!incluidos.length ? <div className="glass panel empty noprint">Marca al menos un registro para armar el estado de cuenta.</div> : (
       <article className="glass panel edc">
         <header className="edc-h">

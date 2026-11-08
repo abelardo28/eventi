@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { formaDePago } from '../domain/reparto'
 import { useStore } from '../data/store'
 import { cola, composicion, concepto, debido, estadoPersona, masRecientes, money, pagado, pct, plan, siguiente, totalPersona } from '../domain/calc'
@@ -59,6 +59,7 @@ export function Persona() {
           {(p.grupo || p.nota) && <div className="meta">{[p.grupo && `Grupo: ${p.grupo}`, p.nota].filter(Boolean).join(' · ')}</div>}
         </div>
         {can('personas.gestionar') && <button className="btn sm ghost" onClick={() => setSheet({ t: 'editar' })}><IcEdit />Editar datos</button>}
+        {participante && <Link className="btn sm ghost" to={`/e/${ev.id}/estado`}><IcReceipt />Estado de cuenta</Link>}
       </section>
 
       <div className="stack-lg deck">
