@@ -4,7 +4,7 @@ import { hoyISO } from '../domain/fechas'
 import { normalizarEmail } from '../domain/auth'
 import { quedaAdmin } from '../domain/permisos'
 import { marcarLeidas } from '../domain/notificaciones'
-import { aUsuario, clienteSinSesion, errorAuth, sb, subirComprobantes, type Perfil } from './nube'
+import { aUsuario, clienteSinSesion, desuscribirPush, errorAuth, sb, subirComprobantes, type Perfil } from './nube'
 import { repoLocal } from './repo'
 import { Ctx, type CambiosUsuario, type Store } from './store'
 
@@ -217,7 +217,7 @@ export function StoreNubeProvider({ children }: { children: ReactNode }) {
       if (!data.session) return 'Te mandamos un correo para confirmar tu cuenta. Ábrelo y después inicia sesión.'
       return null
     },
-    cerrarSesion: () => { setRecuperando(false); nube.auth.signOut() },
+    cerrarSesion: () => { setRecuperando(false); desuscribirPush(false).finally(() => nube.auth.signOut()) },
 
     crearUsuario: async d => {
       if (yo()?.rol !== 'admin') return 'Solo el administrador puede crear usuarios.'

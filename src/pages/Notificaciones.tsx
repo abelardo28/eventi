@@ -45,7 +45,7 @@ function Item({ n, nueva, onAbrir }: { n: Notificacion; nueva: boolean; onAbrir:
 }
 
 export function Notificaciones() {
-  const { usuario, db, marcarLeidas } = useStore()
+  const { usuario, db, marcarLeidas, nube } = useStore()
   const { lista, nuevas } = useNotificaciones()
   const { toast } = useToast()
   const nav = useNavigate()
@@ -86,11 +86,11 @@ export function Notificaciones() {
         {!lista.length && <div className="glass panel empty"><IcBell size={26} /><span>No tienes notificaciones. Aquí verás los pagos registrados, validados o rechazados y los que están por vencer.</span></div>}
         <section className="glass panel stack">
           <div className="between">
-            <span><b>Avisos en este dispositivo</b><div className="small muted">Te avisamos aunque estés en otra app, mientras Eventi siga abierta.</div></span>
+            <span><b>Avisos en este dispositivo</b><div className="small muted">{nube ? 'Te avisamos de pagos y comprobantes aunque Eventi esté cerrada.' : 'Te avisamos aunque estés en otra app, mientras Eventi siga abierta.'}</div></span>
             <Toggle id="t-avisos" checked={activo} onChange={cambiarAvisos} label="Avisos en este dispositivo" disabled={!avisosSoportados()} />
           </div>
           {!avisosSoportados() && <div className="small muted">En iPhone, primero instala Eventi en tu pantalla de inicio (Compartir &gt; Agregar a inicio) y ábrela desde ahí.</div>}
-          <div className="small faint">Se muestran los últimos {VENTANA_DIAS} días. Los avisos con la app cerrada llegarán cuando los datos estén en la nube.</div>
+          <div className="small faint">Se muestran los últimos {VENTANA_DIAS} días.{!nube && ' Los avisos con la app cerrada llegarán cuando los datos estén en la nube.'}</div>
         </section>
       </div>
     </>

@@ -35,3 +35,16 @@ self.addEventListener('notificationclick', e => {
     return self.clients.openWindow(url)
   }))
 })
+
+// Avisos push: llegan desde el servidor aunque la app esté cerrada.
+self.addEventListener('push', e => {
+  let d = {}
+  try { d = e.data ? e.data.json() : {} } catch { d = { texto: e.data ? e.data.text() : '' } }
+  e.waitUntil(self.registration.showNotification(d.titulo || 'Eventi', {
+    body: d.texto || '',
+    tag: d.etiqueta || undefined,
+    icon: 'icono-192.png',
+    badge: 'icono-192.png',
+    data: { url: self.registration.scope + '#' + (d.ruta || '/notificaciones') },
+  }))
+})

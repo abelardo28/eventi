@@ -47,11 +47,17 @@ src/pages/      Inicio, evento (pestañas) y ficha de persona
 src/sheets/     Formularios en hoja inferior
 src/ui/         Componentes base, íconos y logo
 public/         Manifest, service worker e íconos de la PWA
-supabase/       Esquema de Supabase (eventi_nube.sql)
+supabase/       Esquema de Supabase (eventi_nube.sql), avisos push (eventi_push.sql) y la función eventi-push
 ```
 
 ## Siguientes pasos
 
 1. **Conectar el proyecto de Supabase:** correr `supabase/eventi_nube.sql`, desactivar *Confirm email* (para que las cuentas que crea el administrador entren de inmediato), poner la *Site URL* del sitio publicado y llenar `src/nube.config.ts`.
 2. **Recordatorios automáticos:** una tarea programada diaria (Supabase cron / Edge Function) que recorra la cola (`cola()` en `src/domain/calc.ts`) y envíe por la API de WhatsApp Business (Meta Cloud API o Twilio). Requiere plantillas de mensaje aprobadas por Meta.
-3. **Notificaciones push:** Web Push con claves VAPID, suscripción desde la PWA y envío desde la misma tarea programada.
+3. **Avisos push de vencimientos:** los avisos de pagos (comprobante enviado, pago registrado, validado o rechazado) ya llegan con la app cerrada; falta mandar por push los de pagos por vencer desde la tarea diaria.
+
+## Avisos push
+
+1. Correr `supabase/eventi_push.sql` después de `eventi_nube.sql` (activa `pg_net`, crea la cola y el disparador que la llena cuando cambian los abonos).
+2. Publicar `supabase/functions/eventi-push` como Edge Function **sin verificación de JWT** (`supabase functions deploy eventi-push --no-verify-jwt`, o desde el editor del panel desactivando *Enforce JWT verification*). Crea sus propias llaves VAPID la primera vez y las guarda en `push_config`.
+3. En cada dispositivo: Notificaciones → *Avisos en este dispositivo*. En iPhone, con la app instalada en la pantalla de inicio (iOS 16.4+).

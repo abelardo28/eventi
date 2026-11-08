@@ -85,3 +85,44 @@ export async function urlComprobante(c: Comprobante): Promise<string> {
   firmadas.set(ruta, { url: data.signedUrl, vence: Date.now() + 50 * 60 * 1000 })
   return data.signedUrl
 }
+
+// ─── Avisos push (llegan con la app cerrada) ────────────────────────────────
+
+const aBytes = (b64: string) => {
+  const s = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (b64.length % 4)) % 4))
+  return Uint8Array.from(s, c => c.charCodeAt(0))
+}
+
+export const pushSoportado = () => nubeActiva && typeof navigator !== 'undefined' && 'serviceWorker' in navigator && typeof window !== 'undefined' && 'PushManager' in window
+
+/** Registra este dispositivo para recibir avisos de la cuenta actual. Devuelve un mensaje si no se pudo. */
+export async function suscribirPush(): Promise<string | null> {
+  if (!sb || !pushSoportado()) return 'Este dispositivo no acepta avisos con la app cerrada.'
+  try {
+    const reg = await navigator.serviceWorker.ready
+    let sub = await reg.pushManager.getSubscription()
+    if (!sub) {
+      const { data, error } = await sb.functions.invoke('eventi-push', { method: 'GET' })
+      if (error || !data?.clave) return 'Falta configurar los avisos en el servidor (función eventi-push).'
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: aBytes(data.clave) })
+    }
+    const j = sub.toJSON()
+    const { error } = await sb.rpc('guardar_suscripcion', { p_endpoint: j.endpoint, p_p256dh: j.keys?.p256dh, p_auth: j.keys?.auth })
+    if (error) return 'No se pudo registrar este dispositivo: ' + error.message
+    return null
+  } catch (e) {
+    return 'No se pudieron activar los avisos: ' + (e as Error).message
+  }
+}
+
+/** Deja de mandar avisos a este dispositivo (al apagarlos o al cerrar sesión). */
+export async function desuscribirPush(apagar = true): Promise<void> {
+  if (!sb || !pushSoportado()) return
+  try {
+    const reg = await navigator.serviceWorker.getRegistration()
+    const sub = await reg?.pushManager.getSubscription()
+    if (!sub) return
+    await sb.rpc('quitar_suscripcion', { p_endpoint: sub.endpoint })
+    if (apagar) await sub.unsubscribe()
+  } catch { /* sin conexión: el servidor la quitará cuando el dispositivo la rechace */ }
+}

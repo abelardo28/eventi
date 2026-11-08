@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useStore } from './store'
 import { esNueva, notificaciones, type Notificacion } from '../domain/notificaciones'
+import { desuscribirPush, pushSoportado, suscribirPush } from './nube'
 
 /** Notificaciones del usuario actual y cuántas no ha leído. */
 export function useNotificaciones() {
@@ -20,6 +21,8 @@ const claveAvisados = (uid: string) => `eventi-avisados-${uid}`
 
 export const avisosSoportados = () => typeof window !== 'undefined' && 'Notification' in window
 export const avisosActivos = (uid: string) => avisosSoportados() && Notification.permission === 'granted' && leer(claveActivo(uid)) === '1'
+/** Con la nube, los pagos llegan como avisos push y la app ya no los repite. */
+const PUSH: ReadonlySet<Notificacion['tipo']> = new Set(['comprobante', 'registrado', 'validado', 'rechazado'])
 
 async function mostrar(n: Pick<Notificacion, 'id' | 'titulo' | 'texto' | 'ruta'>) {
   const opciones: NotificationOptions = { body: n.texto, tag: n.id, icon: 'icono-192.png', badge: 'icono-192.png', data: { url: `${location.pathname}#${n.ruta}` } }
@@ -35,10 +38,14 @@ const guardarAvisados = (uid: string, s: Set<string>) => escribir(claveAvisados(
 
 /** Activa o desactiva los avisos del sistema. Devuelve un mensaje si no se pudo. */
 export async function activarAvisos(uid: string, activo: boolean, actuales: Notificacion[]): Promise<string | null> {
-  if (!activo) { escribir(claveActivo(uid), '0'); return null }
+  if (!activo) { escribir(claveActivo(uid), '0'); await desuscribirPush(); return null }
   if (!avisosSoportados()) return 'Este navegador no permite avisos. En iPhone, primero instala Eventi en tu pantalla de inicio.'
   const permiso = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission()
   if (permiso !== 'granted') return 'No diste permiso para los avisos. Puedes activarlo en los ajustes del navegador.'
+  if (pushSoportado()) {
+    const err = await suscribirPush()
+    if (err) return err
+  }
   escribir(claveActivo(uid), '1')
   // Lo que ya existe no se vuelve a anunciar
   const s = avisados(uid); actuales.forEach(n => s.add(n.id)); guardarAvisados(uid, s)
@@ -50,10 +57,13 @@ export async function activarAvisos(uid: string, activo: boolean, actuales: Noti
 export function AvisosDelSistema() {
   const { usuario } = useStore()
   const { nuevas } = useNotificaciones()
+  const uid = usuario?.id
+  // Al abrir la app, este dispositivo queda ligado a la cuenta con la que se entró
+  useEffect(() => { if (uid && avisosActivos(uid) && pushSoportado()) suscribirPush() }, [uid])
   useEffect(() => {
     if (!usuario || !avisosActivos(usuario.id)) return
     const s = avisados(usuario.id)
-    const pendientes = nuevas.filter(n => !s.has(n.id))
+    const pendientes = nuevas.filter(n => !s.has(n.id) && !(pushSoportado() && PUSH.has(n.tipo)))
     if (!pendientes.length) return
     pendientes.forEach(n => s.add(n.id))
     guardarAvisados(usuario.id, s)
