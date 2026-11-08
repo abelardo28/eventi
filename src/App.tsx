@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { StoreProvider, useStore } from './data/store'
+import { StoreNubeProvider } from './data/storeNube'
+import { nubeActiva } from './data/nube'
 import { ToastProvider } from './ui/overlay'
 import { Home } from './pages/Home'
 import { Evento } from './pages/Evento'
@@ -43,8 +45,9 @@ function Rutas() {
 }
 
 export default function App() {
+  const Datos = nubeActiva ? StoreNubeProvider : StoreProvider
   return (
-    <StoreProvider>
+    <Datos>
       <ToastProvider>
         <HashRouter>
           <ScrollArriba />
@@ -53,6 +56,6 @@ export default function App() {
           <ErrorGuardado />
         </HashRouter>
       </ToastProvider>
-    </StoreProvider>
+    </Datos>
   )
 }

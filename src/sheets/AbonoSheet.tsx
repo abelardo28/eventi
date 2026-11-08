@@ -8,6 +8,7 @@ import type { Abono, Comprobante, Evento, Metodo } from '../domain/types'
 import { puede } from '../domain/permisos'
 import { IcUpload } from '../ui/icons'
 import { Chips } from '../ui/kit'
+import { VerComprobante } from '../ui/VerComprobante'
 import { Sheet, useToast } from '../ui/overlay'
 
 const METODOS = ['Efectivo', 'Transferencia', 'Depósito'] as const
@@ -104,7 +105,7 @@ export function AbonoSheet({ ev, personaId, conceptoId, abono, onClose }: { ev: 
             <b>{subiendo ? 'Procesando…' : comp ? 'Reemplazar comprobante' : 'Subir comprobante'}</b><br />Foto o PDF de la transferencia o depósito
             <input type="file" id="ab-file" accept="image/*,application/pdf" onChange={e => subir(e.target.files?.[0])} aria-label="Subir comprobante" />
           </div>
-          {comp && (comp.tipo.startsWith('image/') ? <img className="thumb" src={comp.data} alt="Comprobante" /> : <span className="pill neutral">{comp.nombre}</span>)}
+          {comp && <VerComprobante c={comp} />}
           {comp && abono && <button type="button" className="linkbtn small danger" style={{ alignSelf: 'flex-start' }} onClick={() => setComp(null)}>Quitar comprobante</button>}
         </div>
       )}

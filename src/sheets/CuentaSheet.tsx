@@ -7,7 +7,8 @@ import { Sheet, useToast } from '../ui/overlay'
 
 /** Menú de la cuenta: datos, usuarios (admin), contraseña, datos del dispositivo y salir. */
 export function CuentaSheet({ onClose }: { onClose: () => void }) {
-  const { usuario, cerrarSesion, cambiarPassword, restablecer, empezarVacio } = useStore()
+  const { usuario, nube, cerrarSesion, cambiarPassword, restablecer, empezarVacio, subirDatosLocales } = useStore()
+  const [subiendo, setSubiendo] = useState(false)
   const { toast } = useToast()
   const nav = useNavigate()
   const [vista, setVista] = useState<'menu' | 'password' | 'datos'>('menu')
@@ -20,7 +21,7 @@ export function CuentaSheet({ onClose }: { onClose: () => void }) {
     const p = problemaPassword(p1)
     if (p) { setError(p); return }
     if (p1 !== p2) { setError('Las contraseñas no coinciden.'); return }
-    await cambiarPassword(usuario.id, p1)
+    try { await cambiarPassword(usuario.id, p1) } catch (x) { setError((x as Error).message); return }
     toast('Contraseña actualizada'); onClose()
   }
 
@@ -31,7 +32,7 @@ export function CuentaSheet({ onClose }: { onClose: () => void }) {
         <div className="menu">
           {puede(usuario, 'usuarios.gestionar') && <button type="button" onClick={() => { onClose(); nav('/usuarios') }}>Usuarios y roles</button>}
           <button type="button" onClick={() => setVista('password')}>Cambiar contraseña</button>
-          {puede(usuario, 'datos.restablecer') && <button type="button" onClick={() => setVista('datos')}>Datos de este dispositivo</button>}
+          {puede(usuario, 'datos.restablecer') && <button type="button" onClick={() => setVista('datos')}>{nube ? 'Subir datos de este dispositivo' : 'Datos de este dispositivo'}</button>}
           <button type="button" className="danger" onClick={() => { cerrarSesion(); onClose(); nav('/') }}>Cerrar sesión</button>
         </div>
       )}
@@ -43,7 +44,17 @@ export function CuentaSheet({ onClose }: { onClose: () => void }) {
           <button className="btn block" type="submit">Guardar contraseña</button>
         </>
       )}
-      {vista === 'datos' && (
+      {vista === 'datos' && nube && (
+        <div className="stack">
+          <div className="small muted">Ahora los datos se guardan en la nube y se ven igual en todos tus dispositivos. Si capturaste eventos en este dispositivo antes de conectarlo, súbelos aquí. Los que ya estén en la nube no se tocan.</div>
+          <div className="small faint">Las cuentas de este dispositivo no se suben: cada persona crea su cuenta en la nube y se vincula sola por su WhatsApp.</div>
+          <button type="button" className="btn" style={{ alignSelf: 'flex-start' }} disabled={subiendo} onClick={async () => {
+            setSubiendo(true)
+            try { toast(await subirDatosLocales!()) } catch (e) { toast((e as Error).message) } finally { setSubiendo(false) }
+          }}>{subiendo ? 'Subiendo…' : 'Subir eventos a la nube'}</button>
+        </div>
+      )}
+      {vista === 'datos' && !nube && (
         <div className="stack">
           <div className="small muted">Por ahora todo se guarda en este dispositivo. Estas acciones no se pueden deshacer.</div>
           <div className="confirm">

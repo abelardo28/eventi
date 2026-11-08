@@ -317,3 +317,4 @@ button.cuota:active{transform:scale(.97)}
 .seg button[aria-pressed=true]{background:var(--btn);color:var(--on-btn)}
 .badge.gente{background:var(--accent-soft);color:var(--accent)}
 .iconbtn.sm{width:28px;height:28px}.iconbtn.sm svg{width:14px;height:14px}
+.cargando{min-height:60vh;display:grid;place-items:center;color:var(--muted);font-weight:600}

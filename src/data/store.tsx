@@ -12,7 +12,9 @@ import { uid } from './uid'
 export interface NuevoUsuario { nombre: string; email: string; telefono: string; password: string; rol: Rol; eventos?: string[] | null; temporal?: boolean }
 export type CambiosUsuario = Partial<Pick<Usuario, 'nombre' | 'email' | 'telefono' | 'rol' | 'activo' | 'eventos'>>
 
-interface Store {
+export interface Store {
+  /** true cuando los datos viven en Supabase y se comparten entre dispositivos. */
+  nube: boolean
   db: Db
   hoy: string
   usuario: Usuario | null
@@ -34,9 +36,13 @@ interface Store {
   marcarLeidas: (ids: string[] | 'todas') => void
   error: string | null
   limpiarError: () => void
+  /** Solo en la nube: sube los eventos guardados en este dispositivo. */
+  subirDatosLocales?: () => Promise<string>
+  /** Solo en la nube: manda al correo del usuario un enlace para elegir contraseña nueva. */
+  enviarRestablecer?: (email: string) => Promise<string | null>
 }
 
-const Ctx = createContext<Store | null>(null)
+export const Ctx = createContext<Store | null>(null)
 const mismoTel = (a: string, b: string) => { const x = telefonoWhatsApp(a), y = telefonoWhatsApp(b); return !!x && x === y }
 
 export function StoreProvider({ children, repo = repoLocal }: { children: ReactNode; repo?: Repositorio }) {
@@ -80,7 +86,7 @@ export function StoreProvider({ children, repo = repoLocal }: { children: ReactN
     }))
 
   const store = useMemo<Store>(() => ({
-    db, hoy, usuario, error,
+    nube: false, db, hoy, usuario, error,
     limpiarError: () => setError(null),
     evento: id => get().eventos.find(e => e.id === id),
     editarEvento: (id, fn) => {

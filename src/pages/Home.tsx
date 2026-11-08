@@ -9,7 +9,7 @@ import { Bar, Topbar } from '../ui/kit'
 import { EventoSheet } from '../sheets/EventoSheet'
 
 export function Home() {
-  const { db, hoy, usuario } = useStore()
+  const { db, hoy, usuario, nube } = useStore()
   const nav = useNavigate()
   const [nuevo, setNuevo] = useState(false)
   const eventos = eventosVisibles(db.eventos, usuario!)
@@ -59,7 +59,7 @@ export function Home() {
       </div>
 
       <div className="footnote">
-        Por ahora los datos se guardan solo en este dispositivo.
+        {nube ? 'Tus datos se guardan en la nube y se ven en todos tus dispositivos.' : 'Por ahora los datos se guardan solo en este dispositivo.'}
       </div>
 
       {nuevo && <EventoSheet onClose={() => setNuevo(false)} />}

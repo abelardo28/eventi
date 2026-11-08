@@ -10,7 +10,7 @@ const ROLES_LISTA: Rol[] = ['admin', 'capturista', 'participante']
 
 /** Alta y edición de usuarios (solo administrador). */
 export function UsuarioSheet({ usuario, onClose }: { usuario?: Usuario; onClose: () => void }) {
-  const { db, usuario: yo, crearUsuario, editarUsuario, cambiarPassword, editarEvento } = useStore()
+  const { db, nube, usuario: yo, crearUsuario, editarUsuario, cambiarPassword, editarEvento, enviarRestablecer } = useStore()
   const { toast } = useToast()
   const [nombre, setNombre] = useState(usuario?.nombre ?? '')
   const [email, setEmail] = useState(usuario?.email ?? '')
@@ -61,6 +61,11 @@ export function UsuarioSheet({ usuario, onClose }: { usuario?: Usuario; onClose:
 
   const resetear = async () => {
     if (!usuario) return
+    if (nube) {
+      const r = await enviarRestablecer!(usuario.email)
+      if (r) setError(r); else toast(`Le mandamos a ${usuario.email} un enlace para elegir contraseña nueva`)
+      return
+    }
     const pass = passwordTemporal()
     await cambiarPassword(usuario.id, pass, true)
     setTemporal(pass)
@@ -93,7 +98,7 @@ export function UsuarioSheet({ usuario, onClose }: { usuario?: Usuario; onClose:
         <label className="f">Nombre<input className="inp" id="us-n" value={nombre} onChange={e => setNombre(e.target.value)} /></label>
         <label className="f">WhatsApp<input className="inp" id="us-t" type="tel" inputMode="tel" value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="10 dígitos" /></label>
       </div>
-      <label className="f">Correo<input className="inp" id="us-e" type="email" inputMode="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+      <label className="f">Correo<input className="inp" id="us-e" type="email" inputMode="email" value={email} readOnly={nube && !!usuario} onChange={e => setEmail(e.target.value)} /></label>
 
       <div className="f">Rol
         <div className="stack" style={{ gap: 8 }}>

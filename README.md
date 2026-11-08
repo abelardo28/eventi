@@ -20,7 +20,10 @@ App web (adaptada al celular e instalable como PWA) para organizar eventos y lle
   - La primera cuenta creada es administradora; los registros nuevos entran como participantes y se vinculan solos si su WhatsApp coincide con el de una persona del evento. Las cuentas que crea el administrador reciben contraseña temporal y deben cambiarla al entrar.
   - Cuentas de prueba (contraseña `demo1234`): `admin@eventi.demo`, `capturista@eventi.demo`, `luis@eventi.demo`.
 
-Los datos y las cuentas se guardan **solo en el navegador** (`localStorage`, contraseñas con PBKDF2) mientras no haya servidor. Esto sirve para probar, pero no es seguridad real: quien tenga el dispositivo puede leer los datos. La seguridad real llega con Supabase Auth y las políticas de `supabase/migrations/0002_roles.sql`.
+Hay dos modos:
+
+- **Solo este dispositivo** (si `src/nube.config.ts` está vacío): datos y cuentas en `localStorage`, contraseñas con PBKDF2. Sirve para probar; no es seguridad real.
+- **En la nube** (con la URL y la *publishable/anon key* de Supabase en `src/nube.config.ts`): cuentas con Supabase Auth, cada evento como documento `jsonb` con número de versión (si dos personas guardan a la vez, el cambio se reaplica sobre la versión nueva), comprobantes en el bucket privado `comprobantes` y permisos por fila. Los participantes solo reciben sus registros y abonos (`mis_eventos()`) y envían comprobantes con `proponer_abono()`. El esquema completo está en `supabase/eventi_nube.sql` (se pega en el SQL Editor y se puede volver a correr). En *Mi cuenta → Subir datos de este dispositivo* el administrador sube lo que tenía guardado localmente.
 
 ## Cómo correrla
 
@@ -44,11 +47,11 @@ src/pages/      Inicio, evento (pestañas) y ficha de persona
 src/sheets/     Formularios en hoja inferior
 src/ui/         Componentes base, íconos y logo
 public/         Manifest, service worker e íconos de la PWA
-supabase/       Esquema de base de datos para la siguiente etapa
+supabase/       Esquema de Supabase (eventi_nube.sql)
 ```
 
 ## Siguientes pasos
 
-1. **Cuentas y datos en la nube:** crear un proyecto de Supabase, aplicar `supabase/migrations/` (0001 y 0002) y escribir un `Repositorio` que use Supabase en lugar de `localStorage` (`src/data/repo.ts`). Los comprobantes van al bucket privado `comprobantes`.
+1. **Conectar el proyecto de Supabase:** correr `supabase/eventi_nube.sql`, desactivar *Confirm email* (para que las cuentas que crea el administrador entren de inmediato), poner la *Site URL* del sitio publicado y llenar `src/nube.config.ts`.
 2. **Recordatorios automáticos:** una tarea programada diaria (Supabase cron / Edge Function) que recorra la cola (`cola()` en `src/domain/calc.ts`) y envíe por la API de WhatsApp Business (Meta Cloud API o Twilio). Requiere plantillas de mensaje aprobadas por Meta.
 3. **Notificaciones push:** Web Push con claves VAPID, suscripción desde la PWA y envío desde la misma tarea programada.

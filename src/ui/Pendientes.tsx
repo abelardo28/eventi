@@ -1,3 +1,4 @@
+import { VerComprobante } from './VerComprobante'
 import { useState } from 'react'
 import { useStore } from '../data/store'
 import { concepto, money } from '../domain/calc'
@@ -35,9 +36,7 @@ export function AbonoPendiente({ ev, a, mostrarPersona }: { ev: Evento; a: Abono
         <b className="num">{money(a.monto)}</b>
       </div>
       {a.comprobante && (ver
-        ? (a.comprobante.tipo.startsWith('image/')
-          ? <img className="thumb" src={a.comprobante.data} alt="Comprobante" />
-          : <a className="btn sm ghost" href={a.comprobante.data} target="_blank" rel="noreferrer">Abrir {a.comprobante.nombre}</a>)
+        ? <VerComprobante c={a.comprobante} />
         : <button type="button" className="linkbtn small" style={{ alignSelf: 'flex-start' }} onClick={() => setVer(true)}>Ver comprobante</button>)}
       {rechazando ? (
         <div className="stack" style={{ gap: 8 }}>

@@ -7,8 +7,9 @@ import { Logo } from '../ui/icons'
 
 /** Pantalla de entrada: iniciar sesión o crear cuenta. */
 export function Acceso() {
-  const { db, iniciarSesion, registrarse } = useStore()
-  const primera = db.usuarios.length === 0
+  const { db, nube, iniciarSesion, registrarse, enviarRestablecer } = useStore()
+  // En la nube no se sabe desde aquí si ya hay cuentas: siempre se ofrecen las dos opciones
+  const primera = !nube && db.usuarios.length === 0
   const [modo, setModo] = useState<'entrar' | 'registro'>(primera ? 'registro' : 'entrar')
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
@@ -16,6 +17,7 @@ export function Acceso() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
   const hayDemo = db.usuarios.some(u => u.email.endsWith('@eventi.demo'))
 
   const enviar = async (e: FormEvent) => {
@@ -31,6 +33,13 @@ export function Acceso() {
     const r = modo === 'entrar' ? await iniciarSesion(email, password) : await registrarse({ nombre, email, telefono, password })
     setCargando(false)
     if (r) setError(r)
+  }
+
+  const olvide = async () => {
+    setError(null); setAviso(null)
+    if (!emailValido(email)) { setError('Escribe tu correo y vuelve a tocar «Olvidé mi contraseña».'); return }
+    const r = await enviarRestablecer!(email)
+    if (r) setError(r); else setAviso('Te mandamos un correo con un enlace para elegir una contraseña nueva.')
   }
 
   return (
@@ -61,8 +70,10 @@ export function Acceso() {
           {modo === 'registro' && <span className="small faint" style={{ fontWeight: 500 }}>Mínimo 8 caracteres, con letras y números.</span>}
         </label>
         {error && <div className="small neg" role="alert">{error}</div>}
+        {aviso && <div className="small pos" role="status">{aviso}</div>}
         <button className="btn block" type="submit" disabled={cargando}>{cargando ? 'Un momento…' : modo === 'entrar' ? 'Entrar' : 'Crear cuenta'}</button>
-        {modo === 'registro' && !primera && <div className="small faint">Las cuentas nuevas entran como participante. El administrador puede cambiarte el rol.</div>}
+        {modo === 'registro' && !primera && <div className="small faint">Las cuentas nuevas entran como participante. El administrador puede cambiarte el rol.{nube && ' La primera cuenta que se crea es la del administrador.'}</div>}
+        {nube && modo === 'entrar' && <button type="button" className="linkbtn small" style={{ alignSelf: 'center' }} onClick={olvide}>Olvidé mi contraseña</button>}
       </form>
 
       {hayDemo && modo === 'entrar' && (
@@ -93,7 +104,7 @@ export function CambiarPasswordObligatorio() {
     const p = problemaPassword(p1)
     if (p) { setError(p); return }
     if (p1 !== p2) { setError('Las contraseñas no coinciden.'); return }
-    await cambiarPassword(usuario.id, p1)
+    try { await cambiarPassword(usuario.id, p1) } catch (x) { setError((x as Error).message) }
   }
   return (
     <div className="acceso">

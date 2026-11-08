@@ -7,6 +7,7 @@ import type { Evento } from '../domain/types'
 import { puede, puedeEditarAbono } from '../domain/permisos'
 import { IcEdit, IcTrash, IcUpload } from '../ui/icons'
 import { AbonoSheet } from './AbonoSheet'
+import { VerComprobante } from '../ui/VerComprobante'
 import { Sheet, useToast } from '../ui/overlay'
 
 /** Detalle de un abono: comprobante y opción de borrarlo si se registró por error. */
@@ -23,9 +24,7 @@ export function ComprobanteSheet({ ev, abonoId, onClose }: { ev: Evento; abonoId
 
   return (
     <Sheet title={`Abono de ${concepto(ev, a.conceptoId)?.nombre ?? ''}`} onClose={onClose} onSubmit={onClose}>
-      {c && (c.tipo.startsWith('image/')
-        ? <img className="thumb" style={{ maxWidth: '100%', margin: '0 auto' }} src={c.data} alt="Comprobante" />
-        : <a className="btn ghost" href={c.data} target="_blank" rel="noreferrer">Abrir {c.nombre}</a>)}
+      {c && <VerComprobante c={c} grande />}
       <div className="between small"><span className="muted">{formaDePago(ev, a)} · {fCorta(a.fecha)}</span><b className="num">{money(a.monto)}</b></div>
       {a.estado === 'rechazado' && <div className="small neg">Rechazado: {a.motivoRechazo}</div>}
       {a.estado === 'pendiente' && <div className="small" style={{ color: 'var(--warn)' }}>Por validar</div>}
