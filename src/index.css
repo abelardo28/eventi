@@ -321,27 +321,27 @@ button.cuota:active{transform:scale(.97)}
 
 /* Estado de cuenta */
 .ok-t{color:var(--mint)} .bad-t{color:var(--bad)}
-.edc{display:flex;flex-direction:column;gap:20px;width:100%;box-sizing:border-box}
+.edc{display:flex;flex-direction:column;gap:16px;width:100%;box-sizing:border-box}
 .edc-h{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--line)}
-.edc-h h1{font-family:var(--display);font-size:26px;margin:4px 0 2px;letter-spacing:-.02em}
-.edc-h .meta{color:var(--muted);font-size:13px}
+.edc-h h1{font-family:var(--display);font-size:20px;margin:4px 0 2px;letter-spacing:-.02em}
+.edc-h .meta{color:var(--muted);font-size:12.5px}
 .edc-ev{display:flex;flex-direction:column;text-align:right;gap:1px}
 @media (max-width:560px){.edc-ev{text-align:left}}
 .edc-tot{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
 .edc-tot > div{display:flex;flex-direction:column;padding:10px 12px;border-radius:14px;box-shadow:inset 0 0 0 1px var(--line)}
-.edc-tot span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
-.edc-tot b{font-size:19px;font-weight:700}
-.edc h2{font-size:17px;margin:0}
-.edc h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 6px}
+.edc-tot span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.edc-tot b{font-size:16px;font-weight:700}
+.edc h2{font-size:15px;margin:0}
+.edc h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 6px}
 .edc-reg{display:flex;flex-direction:column;gap:14px}
 .edc-t.ab th:nth-child(2){text-align:left}
 .edc-reg + .edc-reg,.edc-s + .edc-reg{padding-top:18px;border-top:2px solid var(--line)}
-.edc-t{width:100%;border-collapse:collapse;font-size:13.5px}
-.edc-t th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:6px 6px 6px 0;border-bottom:1px solid var(--line)}
-.edc-t td{padding:8px 6px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.edc-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.edc-t th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:6px 6px 6px 0;border-bottom:1px solid var(--line)}
+.edc-t td{padding:6px 6px 6px 0;border-bottom:1px solid var(--line);vertical-align:top}
 .edc-t th:not(:first-child),.edc-t td.num:last-child,.edc-t td.num:nth-child(n+2){text-align:right;white-space:nowrap}
 .edc-t td:first-child.num{text-align:left}
-.edc-t td small{display:block;color:var(--muted);font-size:12px}
+.edc-t td small{display:block;color:var(--muted);font-size:11px}
 .edc-t tfoot td{font-weight:700;border-bottom:0;border-top:2px solid var(--line)}
 .edc-t tr{break-inside:avoid}
 
@@ -366,3 +366,5 @@ button.cuota:active{transform:scale(.97)}
 .sel-p{padding:9px 2px;border-bottom:1px solid var(--line)}
 .sel-p .sub{font-size:12px;color:var(--muted)}
 .sel-g input,.sel-p input{width:18px;height:18px;margin:0;accent-color:var(--accent)}
+.trio.cuatro{grid-template-columns:repeat(4,1fr)}
+@media (max-width:520px){.trio.cuatro{grid-template-columns:repeat(2,1fr);row-gap:12px}}

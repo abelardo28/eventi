@@ -41,7 +41,8 @@ export function TabResumen({ ev }: { ev: Evento }) {
         <div className="hero num">{pct(pag, esp)}<small>%</small></div>
         <Bar value={pct(pag, esp)} thick due={pct(deb, esp)} />
         <div className="small muted">La marca muestra lo que debería llevarse cobrado a hoy ({money(deb)}).</div>
-        <div className="trio num">
+        <div className="trio cuatro num">
+          <div className="stat"><div className="v">{money(esp)}</div><div className="l">Total</div></div>
           <div className="stat"><div className="v">{money(pag)}</div><div className="l">Cobrado</div></div>
           <div className="stat"><div className="v">{money(esp - pag)}</div><div className="l">Por cobrar</div></div>
           <div className="stat"><div className="v neg">{money(v)}</div><div className="l">Vencido</div></div>
