@@ -5,8 +5,8 @@
  * VITE_SUPABASE_URL / VITE_SUPABASE_KEY apuntan a otro proyecto (pruebas).
  */
 const PROYECTO = {
-  url: '',
-  key: '',
+  url: 'https://kymqjitszaekattsgcfb.supabase.co',
+  key: 'sb_publishable_ctVDWVUjH8nSKfdsc3_WUg_rbv3ERmt',
 }
 
 const env = import.meta.env
