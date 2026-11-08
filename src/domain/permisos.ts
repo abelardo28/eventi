@@ -1,4 +1,4 @@
-import type { Evento, Persona, Rol, Usuario } from './types'
+import type { Abono, Evento, Persona, Rol, Usuario } from './types'
 
 /**
  * Qué puede hacer cada rol.
@@ -85,3 +85,7 @@ export function eventosVisibles(eventos: Evento[], u: Usuario): Evento[] {
 export function quedaAdmin(usuarios: Usuario[], cambiado: Usuario): boolean {
   return usuarios.some(u => (u.id === cambiado.id ? cambiado : u).rol === 'admin' && (u.id === cambiado.id ? cambiado : u).activo)
 }
+
+/** Administrador y capturista corrigen abonos ya registrados; los que salen de una actividad se rehacen desde ahí. */
+export const puedeEditarAbono = (u: Usuario | null | undefined, ev: Evento, a: Abono) =>
+  a.metodo !== 'Actividad' && puede(u, 'abonos.registrar', ev.id)

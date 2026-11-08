@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Cargo, Concepto, Evento, Persona } from './types'
-import { avancePago, cola, integrantes, debido, esperado, estadoPersona, pagado, plan, porTarifa, repartirPct, siguiente, vencido } from './calc'
+import { avancePago, cola, integrantes, masRecientes, debido, esperado, estadoPersona, pagado, plan, porTarifa, repartirPct, siguiente, vencido } from './calc'
 import { enlaceWhatsApp, telefonoWhatsApp } from './mensajes'
 import { mesesHasta } from './fechas'
 
@@ -104,5 +104,12 @@ describe('integrantes', () => {
     expect(integrantes(p([{ conceptoId: 'i', monto: 1, adultos: null, menores: null, cantidad: 2 }]))).toBe(2)
     expect(integrantes(p([]))).toBe(1)
     expect(integrantes({ ...p([{ conceptoId: 'h', monto: 1, adultos: 2, menores: 0 }]), tipo: 'Persona' })).toBe(1)
+  })
+})
+
+describe('masRecientes', () => {
+  const a = (id: string, fecha: string, creado?: string) => ({ id, personaId: 'p', conceptoId: 'c', monto: 1, fecha, metodo: 'Efectivo' as const, comprobante: null, estado: 'validado' as const, creado })
+  it('ordena por fecha de pago y, a igual fecha, por registro', () => {
+    expect(masRecientes([a('1', '2026-10-01'), a('2', '2026-11-05', 'T1'), a('3', '2026-11-05', 'T2'), a('4', '2026-10-20')]).map(x => x.id)).toEqual(['3', '2', '4', '1'])
   })
 })

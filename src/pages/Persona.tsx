@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { formaDePago } from '../domain/reparto'
 import { useStore } from '../data/store'
-import { cola, composicion, concepto, debido, estadoPersona, money, pagado, pct, plan, siguiente, totalPersona } from '../domain/calc'
+import { cola, composicion, concepto, debido, estadoPersona, masRecientes, money, pagado, pct, plan, siguiente, totalPersona } from '../domain/calc'
 import { fCorta } from '../domain/fechas'
 import { enlaceWhatsApp, mensajeRecordatorio } from '../domain/mensajes'
 import { uid } from '../data/uid'
@@ -13,7 +13,7 @@ import { AbonoSheet } from '../sheets/AbonoSheet'
 import { PersonaSheet } from '../sheets/PersonaSheet'
 import { ComprobanteSheet } from '../sheets/ComprobanteSheet'
 import { NoEncontrado } from './NoEncontrado'
-import { puede, puedeVerPersona } from '../domain/permisos'
+import { puede, puedeEditarAbono, puedeVerPersona } from '../domain/permisos'
 import { AbonoPendiente } from '../ui/Pendientes'
 
 export function Persona() {
@@ -21,7 +21,7 @@ export function Persona() {
   const { evento, hoy, editarEvento, usuario } = useStore()
   const { toast } = useToast()
   const nav = useNavigate()
-  const [sheet, setSheet] = useState<{ t: 'abono'; c?: string } | { t: 'editar' } | { t: 'comp'; a: string } | null>(null)
+  const [sheet, setSheet] = useState<{ t: 'abono'; c?: string } | { t: 'editar' } | { t: 'comp'; a: string } | { t: 'abonoEd'; a: string } | null>(null)
   const [borrar, setBorrar] = useState(false)
   const ev = evento(id)
   const p = ev?.personas.find(x => x.id === pid)
@@ -31,7 +31,7 @@ export function Persona() {
 
   const tot = totalPersona(p), pg = pagado(ev, p.id), st = estadoPersona(ev, p, hoy)
   const fuera = ev.conceptos.filter(c => !p.cargos.some(g => g.conceptoId === c.id))
-  const abonos = ev.abonos.filter(a => a.personaId === p.id)
+  const abonos = masRecientes(ev.abonos.filter(a => a.personaId === p.id))
   const aviso = cola(ev, hoy).find(x => x.p.id === p.id)
   const wa = aviso ? enlaceWhatsApp(p.telefono, mensajeRecordatorio(ev, p, aviso.c, aviso.s)) : null
 
@@ -86,7 +86,10 @@ export function Persona() {
                 {a.estado === 'pendiente' && <span className="pill warn">Por validar</span>}
                 {a.estado === 'rechazado' && <span className="pill bad" title={a.motivoRechazo}>Rechazado</span>}</span>
               <span style={{ textAlign: 'right' }}>
-                <b className={`num ${a.estado === 'rechazado' ? 'faint' : ''}`} style={a.estado === 'rechazado' ? { textDecoration: 'line-through' } : undefined}>{money(a.monto)}</b>
+                <span className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
+                  <b className={`num ${a.estado === 'rechazado' ? 'faint' : ''}`} style={a.estado === 'rechazado' ? { textDecoration: 'line-through' } : undefined}>{money(a.monto)}</b>
+                  {puedeEditarAbono(usuario, ev, a) && <button className="iconbtn sm" aria-label={`Editar abono de ${money(a.monto)}`} onClick={() => setSheet({ t: 'abonoEd', a: a.id })}><IcEdit size={14} /></button>}
+                </span>
                 <div>{a.comprobante
                   ? <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })}>Ver comprobante</button>
                   : <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })} style={{ color: 'var(--faint)' }}>{a.metodo === 'Efectivo' || a.metodo === 'Actividad' ? a.metodo : 'Sin comprobante'}</button>}</div>
@@ -146,6 +149,7 @@ export function Persona() {
 
       {sheet?.t === 'abono' && <AbonoSheet ev={ev} personaId={p.id} conceptoId={sheet.c} onClose={() => setSheet(null)} />}
       {sheet?.t === 'editar' && <PersonaSheet ev={ev} persona={p} onClose={() => setSheet(null)} />}
+      {sheet?.t === 'abonoEd' && (() => { const x = ev.abonos.find(y => y.id === sheet.a); return x ? <AbonoSheet ev={ev} abono={x} onClose={() => setSheet(null)} /> : null })()}
       {sheet?.t === 'comp' && <ComprobanteSheet ev={ev} abonoId={sheet.a} onClose={() => setSheet(null)} />}
     </>
   )

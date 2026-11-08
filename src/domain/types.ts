@@ -77,6 +77,9 @@ export interface Abono {
   /** Actividad de donde salió el dinero cuando metodo es 'Actividad'. */
   actividadId?: string
   motivoRechazo?: string
+  /** Última corrección hecha por el administrador o capturista. */
+  editadoPor?: string | null
+  editado?: string
 }
 
 export type EstadoAbono = 'validado' | 'pendiente' | 'rechazado'

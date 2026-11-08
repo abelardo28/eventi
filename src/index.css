@@ -316,3 +316,4 @@ button.cuota:active{transform:scale(.97)}
 .seg button{border:0;background:none;font:inherit;font-size:13px;font-weight:700;color:var(--muted);border-radius:999px;padding:6px 10px;cursor:pointer}
 .seg button[aria-pressed=true]{background:var(--btn);color:var(--on-btn)}
 .badge.gente{background:var(--accent-soft);color:var(--accent)}
+.iconbtn.sm{width:28px;height:28px}.iconbtn.sm svg{width:14px;height:14px}

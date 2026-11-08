@@ -70,7 +70,11 @@ export const cuenta = (a: Abono) => (a.estado ?? 'validado') === 'validado'
 export const pagado = (ev: Evento, pid?: string | null, cid?: string | null) =>
   ev.abonos.filter(a => cuenta(a) && (!pid || a.personaId === pid) && (!cid || a.conceptoId === cid)).reduce((s, a) => s + a.monto, 0)
 
-export const porValidar = (ev: Evento) => ev.abonos.filter(a => a.estado === 'pendiente')
+/** Del pago más reciente al más antiguo según su fecha de pago; a igual fecha, el último registrado primero. */
+export const masRecientes = (xs: Abono[]) =>
+  xs.slice().sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.creado ?? '').localeCompare(a.creado ?? ''))
+
+export const porValidar = (ev: Evento) => masRecientes(ev.abonos.filter(a => a.estado === 'pendiente'))
 
 const debidoCargo = (c: Concepto, g: Cargo, hoy: ISODate) =>
   plan(c, g.monto).filter(q => q.fecha <= hoy).reduce((s, q) => s + q.monto, 0)

@@ -4,7 +4,7 @@ import { uid } from '../data/uid'
 import { prepararComprobante } from '../data/comprobantes'
 import { cargo, composicion, concepto, money, pagado, siguiente } from '../domain/calc'
 import { fCorta } from '../domain/fechas'
-import type { Comprobante, Evento, Metodo } from '../domain/types'
+import type { Abono, Comprobante, Evento, Metodo } from '../domain/types'
 import { puede } from '../domain/permisos'
 import { IcUpload } from '../ui/icons'
 import { Chips } from '../ui/kit'
@@ -13,23 +13,24 @@ import { Sheet, useToast } from '../ui/overlay'
 const METODOS = ['Efectivo', 'Transferencia', 'Depósito'] as const
 const METODOS_PART = ['Transferencia', 'Depósito'] as const
 
-export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento; personaId?: string; conceptoId?: string; onClose: () => void }) {
+/** Registrar un abono nuevo o, con `abono`, corregir uno ya registrado (monto, fecha, forma de pago y comprobante). */
+export function AbonoSheet({ ev, personaId, conceptoId, abono, onClose }: { ev: Evento; personaId?: string; conceptoId?: string; abono?: Abono; onClose: () => void }) {
   const { hoy, editarEvento, usuario } = useStore()
   // Quien no puede registrar abonos (participante) envía un comprobante que queda por validar.
-  const propuesta = !puede(usuario, 'abonos.registrar', ev.id)
+  const propuesta = !abono && !puede(usuario, 'abonos.registrar', ev.id)
   const { toast } = useToast()
   const conCargos = ev.personas.filter(p => p.cargos.length && (!propuesta || p.id === personaId))
-  const [pid, setPid] = useState(personaId ?? conCargos[0]?.id ?? '')
+  const [pid, setPid] = useState(abono?.personaId ?? personaId ?? conCargos[0]?.id ?? '')
   const persona = ev.personas.find(p => p.id === pid)
   // Por omisión, el primer concepto que todavía tiene saldo
   const conSaldo = (pp: typeof persona) => pp?.cargos.find(g => { const cc = concepto(ev, g.conceptoId); return cc && siguiente(ev, pp, cc, hoy) })?.conceptoId ?? pp?.cargos[0]?.conceptoId ?? ''
-  const [cid, setCid] = useState(conceptoId && persona && cargo(persona, conceptoId) ? conceptoId : conSaldo(persona))
+  const [cid, setCid] = useState(abono ? abono.conceptoId : conceptoId && persona && cargo(persona, conceptoId) ? conceptoId : conSaldo(persona))
   const c = concepto(ev, cid)
   const sig = useMemo(() => (persona && c ? siguiente(ev, persona, c, hoy) : null), [ev, persona, c, hoy])
-  const [monto, setMonto] = useState(sig ? String(sig.monto) : '')
-  const [fecha, setFecha] = useState(hoy)
-  const [metodo, setMetodo] = useState<Metodo>('Transferencia')
-  const [comp, setComp] = useState<Comprobante | null>(null)
+  const [monto, setMonto] = useState(abono ? String(abono.monto) : sig ? String(sig.monto) : '')
+  const [fecha, setFecha] = useState(abono?.fecha ?? hoy)
+  const [metodo, setMetodo] = useState<Metodo>(abono?.metodo ?? 'Transferencia')
+  const [comp, setComp] = useState<Comprobante | null>(abono?.comprobante ?? null)
   const [subiendo, setSubiendo] = useState(false)
 
   const elegir = (nuevoPid: string, nuevoCid?: string) => {
@@ -52,6 +53,15 @@ export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento;
     if (!persona || !c) { toast('Elige persona y concepto'); return }
     if (!(m > 0)) { toast('Escribe el monto del abono'); return }
     if (propuesta && !comp) { toast('Sube la foto o PDF del comprobante'); return }
+    if (abono) {
+      const ok = editarEvento(ev.id, e => {
+        const x = e.abonos.find(y => y.id === abono.id)
+        if (!x) return
+        Object.assign(x, { personaId: persona.id, conceptoId: c.id, monto: m, fecha: fecha || hoy, metodo, comprobante: metodo === 'Efectivo' ? null : comp, editadoPor: usuario?.id ?? null, editado: new Date().toISOString() })
+      })
+      if (ok) { toast('Abono actualizado'); onClose() }
+      return
+    }
     const ok = editarEvento(ev.id, e => {
       e.abonos.unshift({
         id: uid('a'), personaId: persona.id, conceptoId: c.id, monto: m, fecha: fecha || hoy, metodo,
@@ -63,7 +73,7 @@ export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento;
 
   const g = persona && c ? cargo(persona, c.id) : undefined
   return (
-    <Sheet title={propuesta ? 'Enviar comprobante de pago' : 'Registrar abono'} onClose={onClose} onSubmit={guardar}>
+    <Sheet title={abono ? 'Editar abono' : propuesta ? 'Enviar comprobante de pago' : 'Registrar abono'} onClose={onClose} onSubmit={guardar}>
       {propuesta && <div className="small muted">El organizador revisará tu comprobante. Mientras tanto aparecerá como “por validar”.</div>}
       {!propuesta && <label className="f">Persona o familia
         <select className="inp" id="ab-p" value={pid} onChange={e => elegir(e.target.value)}>
@@ -75,7 +85,8 @@ export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento;
           {persona?.cargos.map(x => <option key={x.conceptoId} value={x.conceptoId}>{concepto(ev, x.conceptoId)?.nombre}</option>)}
         </select>
       </label>
-      {persona && c && g && (
+      {abono?.estado === 'pendiente' && <div className="small" style={{ color: 'var(--warn)' }}>Este abono sigue por validar; al guardarlo no cambia su estado.</div>}
+      {persona && c && g && !abono && (
         <div className="small muted">
           Lleva <b className="num">{money(pagado(ev, persona.id, c.id))}</b> de {money(g.monto)} ({composicion(g)}).{' '}
           {sig ? <>{sig.vencida ? 'Pendiente vencido' : 'Siguiente pago'}: <b className="num">{money(sig.monto)}</b>, {fCorta(sig.fecha)}.</> : 'Este concepto ya está liquidado.'}
@@ -90,13 +101,14 @@ export function AbonoSheet({ ev, personaId, conceptoId, onClose }: { ev: Evento;
         <div className="stack" style={{ gap: 8 }}>
           <div className={`drop ${comp ? 'has' : ''}`}>
             <IcUpload size={22} style={{ display: 'block', margin: '0 auto 4px' }} />
-            <b>{subiendo ? 'Procesando…' : comp ? 'Cambiar comprobante' : 'Subir comprobante'}</b><br />Foto o PDF de la transferencia o depósito
+            <b>{subiendo ? 'Procesando…' : comp ? 'Reemplazar comprobante' : 'Subir comprobante'}</b><br />Foto o PDF de la transferencia o depósito
             <input type="file" id="ab-file" accept="image/*,application/pdf" onChange={e => subir(e.target.files?.[0])} aria-label="Subir comprobante" />
           </div>
           {comp && (comp.tipo.startsWith('image/') ? <img className="thumb" src={comp.data} alt="Comprobante" /> : <span className="pill neutral">{comp.nombre}</span>)}
+          {comp && abono && <button type="button" className="linkbtn small danger" style={{ alignSelf: 'flex-start' }} onClick={() => setComp(null)}>Quitar comprobante</button>}
         </div>
       )}
-      <button className="btn block" type="submit" disabled={subiendo}>{propuesta ? 'Enviar comprobante' : 'Guardar abono'}</button>
+      <button className="btn block" type="submit" disabled={subiendo}>{abono ? 'Guardar cambios' : propuesta ? 'Enviar comprobante' : 'Guardar abono'}</button>
     </Sheet>
   )
 }
