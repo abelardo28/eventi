@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Concepto, Evento, Persona } from './types'
-import { avancePago, cola, debido, esperado, estadoPersona, pagado, plan, porTarifa, repartirPct, siguiente, vencido } from './calc'
+import type { Cargo, Concepto, Evento, Persona } from './types'
+import { avancePago, cola, integrantes, debido, esperado, estadoPersona, pagado, plan, porTarifa, repartirPct, siguiente, vencido } from './calc'
 import { enlaceWhatsApp, telefonoWhatsApp } from './mensajes'
 import { mesesHasta } from './fechas'
 
@@ -94,5 +94,15 @@ describe('avance por fecha de pago', () => {
     expect(avancePago(ev, familia, hospedaje, 1)).toEqual({ monto: 2650, cubierto: 300, completo: false })
     expect(avancePago(ev, familia, hospedaje, 2)).toEqual({ monto: 2650, cubierto: 0, completo: false })
     expect(avancePago(ev, familia, hospedaje, null)).toEqual({ monto: 8000, cubierto: 3000, completo: false })
+  })
+})
+
+describe('integrantes', () => {
+  const p = (cargos: Cargo[]): Persona => ({ id: 'p', nombre: 'X', tipo: 'Familia', telefono: '', cargos })
+  it('cuenta adultos y menores, o la cantidad, y nunca menos de 1', () => {
+    expect(integrantes(p([{ conceptoId: 'h', monto: 1, adultos: 2, menores: 1 }, { conceptoId: 't', monto: 1, adultos: 2, menores: 0 }]))).toBe(3)
+    expect(integrantes(p([{ conceptoId: 'i', monto: 1, adultos: null, menores: null, cantidad: 2 }]))).toBe(2)
+    expect(integrantes(p([]))).toBe(1)
+    expect(integrantes({ ...p([{ conceptoId: 'h', monto: 1, adultos: 2, menores: 0 }]), tipo: 'Persona' })).toBe(1)
   })
 })

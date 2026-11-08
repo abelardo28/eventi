@@ -55,6 +55,10 @@ export function composicion(g: Cargo): string {
 
 export const concepto = (ev: Evento, cid: string) => ev.conceptos.find(c => c.id === cid)
 export const cargo = (p: Persona, cid: string) => p.cargos.find(g => g.conceptoId === cid)
+/** Cuántas personas abarca un registro: 1 si es persona; en una familia, la mayor cantidad que aparece en sus conceptos. */
+export const integrantes = (p: Persona) => p.tipo !== 'Familia' ? 1 :
+  Math.max(1, ...p.cargos.map(g => (g.adultos != null ? g.adultos + (g.menores ?? 0) : g.cantidad ?? 1)))
+
 export const totalPersona = (p: Persona) => p.cargos.reduce((s, g) => s + g.monto, 0)
 
 export const esperado = (ev: Evento, cid?: string) =>

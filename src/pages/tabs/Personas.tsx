@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../../data/store'
-import { concepto, debido, estadoPersona, money, pagado, pct, totalPersona } from '../../domain/calc'
+import { concepto, debido, estadoPersona, integrantes, money, pagado, pct, plural, totalPersona } from '../../domain/calc'
 import type { Evento } from '../../domain/types'
 import { puede } from '../../domain/permisos'
 import { IcPlus, IcReceipt } from '../../ui/icons'
@@ -23,7 +23,7 @@ export function TabPersonas({ ev }: { ev: Evento }) {
     <div className="stack">
       <div className="between">
         <h2 className="titlerow">Personas registradas<span className="badge">{ev.personas.length}</span></h2>
-        <span className="small muted">{ev.personas.filter(p => p.tipo === 'Familia').length} familias</span>
+        <span className="small muted">{plural(ev.personas.filter(p => p.tipo === 'Familia').length, 'familia', 'familias')} · {plural(ev.personas.reduce((s, p) => s + integrantes(p), 0), 'persona', 'personas')} en total</span>
       </div>
       <div className="row">
         <input className="inp" id="buscar" type="search" placeholder={hayGrupos ? "Buscar persona, familia o grupo" : "Buscar persona o familia"} value={q} onChange={e => setQ(e.target.value)} style={{ flex: 1 }} />
@@ -39,7 +39,7 @@ export function TabPersonas({ ev }: { ev: Evento }) {
               <Fragment key={p.id}>
               {encabezado && (
                 <div className="grupo-h">
-                  <span>{p.grupo ?? 'Sin grupo'}<span className="badge">{delGrupo.length}</span></span>
+                  <span>{p.grupo ?? 'Sin grupo'}<span className="badge" title={plural(delGrupo.length, 'registro', 'registros')}>{delGrupo.length}</span><span className="badge gente">{plural(delGrupo.reduce((s, x) => s + integrantes(x), 0), 'persona', 'personas')}</span></span>
                   <span className="num">{money(delGrupo.reduce((s, x) => s + pagado(ev, x.id), 0))} / {money(delGrupo.reduce((s, x) => s + totalPersona(x), 0))}</span>
                 </div>
               )}
