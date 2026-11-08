@@ -40,7 +40,10 @@ export function TabPersonas({ ev }: { ev: Evento }) {
               {encabezado && (
                 <div className="grupo-h">
                   <span>{p.grupo ?? 'Sin grupo'}<span className="badge" title={plural(delGrupo.length, 'registro', 'registros')}>{delGrupo.length}</span><span className="badge gente">{plural(delGrupo.reduce((s, x) => s + integrantes(x), 0), 'persona', 'personas')}</span></span>
-                  <span className="num">{money(delGrupo.reduce((s, x) => s + pagado(ev, x.id), 0))} / {money(delGrupo.reduce((s, x) => s + totalPersona(x), 0))}</span>
+                  <span className="grupo-d">
+                    <span className="num">{money(delGrupo.reduce((s, x) => s + pagado(ev, x.id), 0))} / {money(delGrupo.reduce((s, x) => s + totalPersona(x), 0))}</span>
+                    {p.grupo && <Link className="edc-link" to={`/e/${ev.id}/estado/g/${encodeURIComponent(p.grupo)}`} aria-label={`Estado de cuenta del grupo ${p.grupo}`}><IcReceipt />Estado de cuenta</Link>}
+                  </span>
                 </div>
               )}
               <Link className="item" to={`/e/${ev.id}/p/${p.id}`} style={{ textDecoration: 'none' }}>
