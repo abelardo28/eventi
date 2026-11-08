@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../data/store'
 import { concepto, integrantes, money, plural } from '../domain/calc'
@@ -7,6 +8,8 @@ import { formaDePago } from '../domain/reparto'
 import { puede, puedeVerPersona } from '../domain/permisos'
 import type { Evento } from '../domain/types'
 import { Topbar } from '../ui/kit'
+import { IcUpload } from '../ui/icons'
+import { useToast } from '../ui/overlay'
 import { NoEncontrado } from './NoEncontrado'
 
 const fechasEvento = (ev: Evento) => ev.fin && ev.fin !== ev.fecha ? `${fCompleta(ev.fecha)} al ${fCompleta(ev.fin)}` : fCompleta(ev.fecha)
@@ -15,6 +18,10 @@ const fechasEvento = (ev: Evento) => ev.fin && ev.fin !== ev.fecha ? `${fComplet
 export function EstadoCuenta() {
   const { id, tipo, clave } = useParams()
   const { evento, hoy, usuario } = useStore()
+  const { toast } = useToast()
+  // El generador de PDF se carga al abrir la página: el iPhone solo deja compartir justo después del toque
+  const [pdf, setPdf] = useState<typeof import('../domain/estadoPdf') | null>(null)
+  useEffect(() => { import('../domain/estadoPdf').then(setPdf, () => {}) }, [])
   const ev = evento(id)
   if (!ev || !clave) return <NoEncontrado />
 
@@ -41,12 +48,31 @@ export function EstadoCuenta() {
   } else return <NoEncontrado />
 
   const t = totales ?? registros[0]
+  const tactil = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+
+  const guardarPdf = async () => {
+    if (!pdf) return
+    let blob: Blob
+    try { blob = pdf.estadoPdf({ ev, hoy, titulo, sub, registros, totales }) } catch { toast('No se pudo generar el PDF.'); return }
+    const nombre = pdf.nombreArchivo(titulo)
+    const archivo = new File([blob], nombre, { type: 'application/pdf' })
+    // En el celular se abre el menú de compartir (Guardar en Archivos, WhatsApp, Imprimir…)
+    if (tactil && navigator.canShare?.({ files: [archivo] })) {
+      try { await navigator.share({ files: [archivo] }); return } catch (e) { if ((e as Error).name === 'AbortError') return }
+    }
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = nombre
+    document.body.append(a); a.click(); a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
 
   return (
     <>
       <div className="noprint"><Topbar back={volver} /></div>
       <div className="row wrap noprint" style={{ justifyContent: 'flex-end', marginBottom: 12 }}>
-        <button className="btn" onClick={() => window.print()}>Imprimir o guardar PDF</button>
+        {!tactil && <button className="btn ghost" onClick={() => window.print()}>Imprimir</button>}
+        <button className="btn" onClick={guardarPdf} disabled={!pdf}><IcUpload />{tactil ? 'Compartir o guardar PDF' : 'Descargar PDF'}</button>
       </div>
 
       <article className="glass panel edc">
