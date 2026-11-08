@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf'
 import { autoTable } from 'jspdf-autotable'
-import { concepto, integrantes, money, plural } from './calc'
-import type { EstadoRegistro } from './estadoCuenta'
+import { concepto, money, plural } from './calc'
+import { tipoRegistro, type EstadoRegistro, type SubtotalGrupo } from './estadoCuenta'
 import { fCompleta, fCorta } from './fechas'
 import { formaDePago } from './reparto'
 import type { Evento, ISODate } from './types'
@@ -14,6 +14,8 @@ export interface DatosEstado {
   registros: EstadoRegistro[]
   /** Solo en el estado de cuenta de un grupo. */
   totales: { total: number; pagado: number; saldo: number; vencido: number } | null
+  ambito?: 'grupo' | 'evento'
+  grupos?: SubtotalGrupo[]
 }
 
 const TINTA: [number, number, number] = [20, 21, 26]
@@ -23,7 +25,6 @@ const ROJO: [number, number, number] = [198, 47, 52]
 const VERDE: [number, number, number] = [13, 127, 107]
 
 const fechaAbono = (f: ISODate) => `${fCorta(f)} ${f.slice(0, 4)}`
-export const tipoRegistro = (r: EstadoRegistro) => r.p.tipo === 'Familia' ? `Familia · ${plural(integrantes(r.p), 'persona', 'personas')}` : 'Persona'
 
 /** Nombre de archivo sin acentos ni signos. */
 export const nombreArchivo = (titulo: string) =>
@@ -44,15 +45,17 @@ export function estadoPdf(d: DatosEstado): Blob {
   }
 
   // Encabezado
+  const esEvento = d.titulo === d.ev.nombre
   texto('ESTADO DE CUENTA', M, 8, { color: GRIS, bold: true })
-  texto(d.ev.nombre, W - M, 10, { bold: true, align: 'right' })
-  y += 22
-  texto(d.titulo, M, 20, { bold: true })
-  const fechas = d.ev.fin && d.ev.fin !== d.ev.fecha ? `${fCompleta(d.ev.fecha)} al ${fCompleta(d.ev.fin)}` : fCompleta(d.ev.fecha)
-  y -= 8; texto(fechas + (d.ev.lugar ? ` · ${d.ev.lugar}` : ''), W - M, 8.5, { color: GRIS, align: 'right' }); y += 8
-  y += 16
+  texto(`Generado el ${fCompleta(d.hoy)}`, W - M, 8, { color: GRIS, align: 'right' })
+  y += 24
+  doc.setFont('helvetica', 'bold').setFontSize(20)
+  for (const linea of doc.splitTextToSize(d.titulo, W - 2 * M) as string[]) { texto(linea, M, 20, { bold: true }); y += 22 }
+  y -= 6
   texto(d.sub, M, 9.5, { color: GRIS })
-  texto(`Generado el ${fCompleta(d.hoy)}`, W - M, 8.5, { color: GRIS, align: 'right' })
+  y += 14
+  const fechas = d.ev.fin && d.ev.fin !== d.ev.fecha ? `${fCompleta(d.ev.fecha)} al ${fCompleta(d.ev.fin)}` : fCompleta(d.ev.fecha)
+  texto([esEvento ? '' : d.ev.nombre, fechas, d.ev.lugar].filter(Boolean).join(' · '), M, 9.5, { color: GRIS })
   y += 12
   doc.setDrawColor(...LINEA).setLineWidth(0.8).line(M, y, W - M, y)
   y += 16
@@ -87,16 +90,23 @@ export function estadoPdf(d: DatosEstado): Blob {
   const conNota = (a: string, b: string) => `${a}\n${b}`
 
   if (d.totales) {
-    texto('Resumen del grupo', M, 12, { bold: true }); y += 4
+    const evento = d.ambito === 'evento'
+    if (d.grupos?.length) {
+      texto('Por grupo', M, 12, { bold: true }); y += 4
+      tabla([['GRUPO', 'TOTAL', 'PAGADO', 'SALDO']],
+        d.grupos.map(g => [conNota(g.nombre, `${plural(g.registros, 'registro', 'registros')} · ${plural(g.personas, 'persona', 'personas')}`), money(g.total), money(g.pagado), money(g.saldo)]))
+      y += 6; espacio(60)
+    }
+    texto(evento ? 'Resumen por registro' : 'Resumen del grupo', M, 12, { bold: true }); y += 4
     tabla([['REGISTRO', 'TOTAL', 'PAGADO', 'SALDO']],
-      d.registros.map(r => [conNota(r.p.nombre, tipoRegistro(r) + (r.vencido > 0 ? ` · vencido ${money(r.vencido)}` : '')), money(r.total), money(r.pagado), money(r.saldo)]),
-      [['Total del grupo', money(d.totales.total), money(d.totales.pagado), money(d.totales.saldo)]])
+      d.registros.map(r => [conNota(r.p.nombre, tipoRegistro(r) + (evento && r.p.grupo ? ` · ${r.p.grupo}` : '') + (r.vencido > 0 ? ` · vencido ${money(r.vencido)}` : '')), money(r.total), money(r.pagado), money(r.saldo)]),
+      [[evento ? 'Total del evento' : 'Total del grupo', money(d.totales.total), money(d.totales.pagado), money(d.totales.saldo)]])
     y += 6
   }
 
   d.registros.forEach((r, i) => {
     if (d.totales) {
-      espacio(80)
+      espacio(170)
       if (i > 0 || d.totales) { doc.setDrawColor(...LINEA).setLineWidth(1.2).line(M, y, W - M, y); y += 20 }
       texto(r.p.nombre, M, 13, { bold: true })
       texto(tipoRegistro(r), W - M, 9, { color: GRIS, align: 'right' })
@@ -126,7 +136,7 @@ export function estadoPdf(d: DatosEstado): Blob {
   const n = doc.getNumberOfPages()
   for (let i = 1; i <= n; i++) {
     doc.setPage(i); y = doc.internal.pageSize.getHeight() - 22
-    texto(`${d.titulo} · ${d.ev.nombre}`, M, 7.5, { color: GRIS })
+    texto(esEvento ? d.titulo : `${d.titulo} · ${d.ev.nombre}`, M, 7.5, { color: GRIS })
     texto(`Página ${i} de ${n}`, W - M, 7.5, { color: GRIS, align: 'right' })
   }
   return doc.output('blob')

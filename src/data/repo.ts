@@ -1,3 +1,4 @@
+import { almacenSesion } from './recordar'
 import type { Db } from '../domain/types'
 
 /**
@@ -44,9 +45,9 @@ export const repoLocal: Repositorio = {
     }
   },
   sesion() {
-    try { return localStorage.getItem(CLAVE_SESION) } catch { return null }
+    return almacenSesion.getItem(CLAVE_SESION)
   },
   guardarSesion(id) {
-    try { if (id) localStorage.setItem(CLAVE_SESION, id); else localStorage.removeItem(CLAVE_SESION) } catch { /* sin almacenamiento: la sesión dura lo que la pestaña */ }
+    if (id) almacenSesion.setItem(CLAVE_SESION, id); else almacenSesion.removeItem(CLAVE_SESION)
   },
 }

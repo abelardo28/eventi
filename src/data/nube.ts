@@ -1,11 +1,12 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Comprobante, Evento, Usuario } from '../domain/types'
 import { NUBE } from '../nube.config'
+import { almacenSesion } from './recordar'
 
 export const nubeActiva = !!(NUBE.url && NUBE.key)
 
 /** Cliente de Supabase; null cuando la app trabaja solo en este dispositivo. */
-export const sb: SupabaseClient | null = nubeActiva ? createClient(NUBE.url, NUBE.key) : null
+export const sb: SupabaseClient | null = nubeActiva ? createClient(NUBE.url, NUBE.key, { auth: { storage: almacenSesion } }) : null
 
 /** Un cliente aparte, sin sesión guardada, para que el administrador cree cuentas sin salir de la suya. */
 export const clienteSinSesion = () => createClient(NUBE.url, NUBE.key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'eventi-alta' } })

@@ -362,3 +362,5 @@ button.cuota:active{transform:scale(.97)}
   .edc-tot > div{box-shadow:inset 0 0 0 1px var(--line)}
   @page{margin:14mm}
 }
+.recordar{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer;user-select:none}
+.recordar input{width:18px;height:18px;margin:0;accent-color:var(--accent)}

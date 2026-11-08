@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estadoGrupo, estadoRegistro } from './estadoCuenta'
+import { estadoGrupo, estadoRegistro, subtotalesPorGrupo, type EstadoRegistro } from './estadoCuenta'
 import type { Evento } from './types'
 
 const ev: Evento = {
@@ -32,5 +32,14 @@ describe('estado de cuenta', () => {
     const g = estadoGrupo(ev, ev.personas, '2026-11-08')
     expect([g.total, g.pagado, g.saldo]).toEqual([8800, 3800, 5000])
     expect(g.registros).toHaveLength(2)
+  })
+})
+
+describe('subtotalesPorGrupo', () => {
+  it('agrupa y deja "Sin grupo" al final', () => {
+    const r = (grupo: string | undefined, total: number, pagado: number) => ({ p: { id: grupo ?? 'x', nombre: 'n', tipo: 'Persona', telefono: '', cargos: [], grupo }, conceptos: [], abonos: [], porValidar: [], total, pagado, saldo: total - pagado, vencido: 0 }) as unknown as EstadoRegistro
+    const g = subtotalesPorGrupo([r(undefined, 100, 0), r('Santiago', 300, 100), r('Ana', 50, 50), r('Santiago', 200, 0)])
+    expect(g.map(x => [x.nombre, x.registros, x.total, x.saldo])).toEqual([['Ana', 1, 50, 0], ['Santiago', 2, 500, 400], ['Sin grupo', 1, 100, 100]])
+    expect(subtotalesPorGrupo([r(undefined, 1, 0)])).toEqual([])
   })
 })

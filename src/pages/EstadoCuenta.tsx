@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore } from '../data/store'
 import { concepto, integrantes, money, plural } from '../domain/calc'
-import { estadoGrupo, estadoRegistro, type EstadoRegistro } from '../domain/estadoCuenta'
+import { estadoGrupo, estadoRegistro, subtotalesPorGrupo, tipoRegistro, type EstadoRegistro, type SubtotalGrupo } from '../domain/estadoCuenta'
 import { fCompleta, fCorta } from '../domain/fechas'
 import { formaDePago } from '../domain/reparto'
 import { puede, puedeVerPersona } from '../domain/permisos'
@@ -27,6 +27,8 @@ export function EstadoCuenta() {
 
   let titulo: string, sub: string, registros: EstadoRegistro[], volver: string
   let totales: { total: number; pagado: number; saldo: number; vencido: number } | null = null
+  let ambito: 'grupo' | 'evento' = 'grupo'
+  let grupos: SubtotalGrupo[] = []
   if (tipo === 'p') {
     const p = ev.personas.find(x => x.id === clave)
     if (!p || !puedeVerPersona(usuario, ev, p)) return <NoEncontrado />
@@ -45,6 +47,17 @@ export function EstadoCuenta() {
     registros = g.registros
     totales = g
     volver = `/e/${ev.id}/personas`
+  } else if (tipo === 'e') {
+    if (!puede(usuario, 'evento.ver', ev.id) || !ev.personas.length) return <NoEncontrado />
+    const orden = [...ev.personas].sort((a, b) => (a.grupo ?? '\uffff').localeCompare(b.grupo ?? '\uffff', 'es') || a.nombre.localeCompare(b.nombre, 'es'))
+    const g = estadoGrupo(ev, orden, hoy)
+    titulo = ev.nombre
+    sub = `Todo el evento · ${plural(orden.length, 'registro', 'registros')} · ${plural(orden.reduce((s, x) => s + integrantes(x), 0), 'persona', 'personas')}`
+    registros = g.registros
+    totales = g
+    ambito = 'evento'
+    grupos = subtotalesPorGrupo(g.registros)
+    volver = `/e/${ev.id}`
   } else return <NoEncontrado />
 
   const t = totales ?? registros[0]
@@ -53,7 +66,7 @@ export function EstadoCuenta() {
   const guardarPdf = async () => {
     if (!pdf) return
     let blob: Blob
-    try { blob = pdf.estadoPdf({ ev, hoy, titulo, sub, registros, totales }) } catch { toast('No se pudo generar el PDF.'); return }
+    try { blob = pdf.estadoPdf({ ev, hoy, titulo, sub, registros, totales, ambito, grupos }) } catch { toast('No se pudo generar el PDF.'); return }
     const nombre = pdf.nombreArchivo(titulo)
     const archivo = new File([blob], nombre, { type: 'application/pdf' })
     // En el celular se abre el menú de compartir (Guardar en Archivos, WhatsApp, Imprimir…)
@@ -83,7 +96,7 @@ export function EstadoCuenta() {
             <div className="meta">{sub}</div>
           </div>
           <div className="edc-ev small">
-            <strong>{ev.nombre}</strong>
+            {ambito !== 'evento' && <strong>{ev.nombre}</strong>}
             <span>{fechasEvento(ev)}{ev.lugar && ` · ${ev.lugar}`}</span>
             <span className="muted">Generado el {fCompleta(hoy)}</span>
           </div>
@@ -98,18 +111,34 @@ export function EstadoCuenta() {
 
         {totales && (
           <section className="edc-s">
-            <h2>Resumen del grupo</h2>
+            {grupos.length > 0 && (
+              <>
+                <h2>Por grupo</h2>
+                <table className="edc-t" style={{ marginBottom: 18 }}>
+                  <thead><tr><th>Grupo</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
+                  <tbody>
+                    {grupos.map(g => (
+                      <tr key={g.nombre}>
+                        <td>{g.nombre}<small>{plural(g.registros, 'registro', 'registros')} · {plural(g.personas, 'persona', 'personas')}</small></td>
+                        <td className="num">{money(g.total)}</td><td className="num">{money(g.pagado)}</td><td className="num">{money(g.saldo)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+            <h2>{ambito === 'evento' ? 'Resumen por registro' : 'Resumen del grupo'}</h2>
             <table className="edc-t">
               <thead><tr><th>Registro</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead>
               <tbody>
                 {registros.map(r => (
                   <tr key={r.p.id}>
-                    <td>{r.p.nombre}<small>{r.p.tipo === 'Familia' ? `Familia · ${plural(integrantes(r.p), 'persona', 'personas')}` : 'Persona'}{r.vencido > 0 && <> · <span className="bad-t">vencido {money(r.vencido)}</span></>}</small></td>
+                    <td>{r.p.nombre}<small>{tipoRegistro(r)}{ambito === 'evento' && r.p.grupo && ` · ${r.p.grupo}`}{r.vencido > 0 && <> · <span className="bad-t">vencido {money(r.vencido)}</span></>}</small></td>
                     <td className="num">{money(r.total)}</td><td className="num">{money(r.pagado)}</td><td className="num">{money(r.saldo)}</td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot><tr><td>Total del grupo</td><td className="num">{money(totales.total)}</td><td className="num">{money(totales.pagado)}</td><td className="num">{money(totales.saldo)}</td></tr></tfoot>
+              <tfoot><tr><td>{ambito === 'evento' ? 'Total del evento' : 'Total del grupo'}</td><td className="num">{money(totales.total)}</td><td className="num">{money(totales.pagado)}</td><td className="num">{money(totales.saldo)}</td></tr></tfoot>
             </table>
           </section>
         )}

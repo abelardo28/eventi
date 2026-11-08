@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useStore } from '../data/store'
+import { fijarRecordar, recordarSesion } from '../data/recordar'
 import { CUENTAS_DEMO, PASSWORD_DEMO } from '../data/seed'
 import { emailValido, problemaPassword } from '../domain/auth'
 import { ROLES } from '../domain/permisos'
@@ -18,6 +19,7 @@ export function Acceso() {
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [recordar, setRecordar] = useState(recordarSesion)
   const hayDemo = db.usuarios.some(u => u.email.endsWith('@eventi.demo'))
 
   const enviar = async (e: FormEvent) => {
@@ -29,6 +31,7 @@ export function Acceso() {
       const p = problemaPassword(password)
       if (p) { setError(p); return }
     }
+    fijarRecordar(recordar)
     setCargando(true)
     const r = modo === 'entrar' ? await iniciarSesion(email, password) : await registrarse({ nombre, email, telefono, password })
     setCargando(false)
@@ -69,6 +72,7 @@ export function Acceso() {
           <input className="inp" id="ac-pass" type="password" autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} />
           {modo === 'registro' && <span className="small faint" style={{ fontWeight: 500 }}>Mínimo 8 caracteres, con letras y números.</span>}
         </label>
+        <label className="recordar"><input type="checkbox" id="ac-recordar" checked={recordar} onChange={e => setRecordar(e.target.checked)} />Recordar sesión en este dispositivo</label>
         {error && <div className="small neg" role="alert">{error}</div>}
         {aviso && <div className="small pos" role="status">{aviso}</div>}
         <button className="btn block" type="submit" disabled={cargando}>{cargando ? 'Un momento…' : modo === 'entrar' ? 'Entrar' : 'Crear cuenta'}</button>

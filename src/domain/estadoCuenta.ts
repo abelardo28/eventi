@@ -1,4 +1,4 @@
-import { composicion, concepto, cuenta, masRecientes, siguiente, totalPersona, type Siguiente } from './calc'
+import { composicion, concepto, cuenta, integrantes, masRecientes, plural, siguiente, totalPersona, type Siguiente } from './calc'
 import type { Abono, Evento, ISODate, Persona } from './types'
 
 export interface LineaConcepto { nombre: string; detalle: string; total: number; pagado: number; saldo: number; proximo: Siguiente | null }
@@ -39,4 +39,22 @@ export function estadoGrupo(ev: Evento, personas: Persona[], hoy: ISODate) {
   const registros = personas.map(p => estadoRegistro(ev, p, hoy))
   const suma = (k: 'total' | 'pagado' | 'saldo' | 'vencido') => r2(registros.reduce((s, x) => s + x[k], 0))
   return { registros, total: suma('total'), pagado: suma('pagado'), saldo: suma('saldo'), vencido: suma('vencido') }
+}
+
+export const tipoRegistro = (r: EstadoRegistro) => r.p.tipo === 'Familia' ? `Familia · ${plural(integrantes(r.p), 'persona', 'personas')}` : 'Persona'
+
+export interface SubtotalGrupo { nombre: string; registros: number; personas: number; total: number; pagado: number; saldo: number }
+
+/** Subtotales por grupo (los registros sin grupo van al final como "Sin grupo"). Vacío si nadie tiene grupo. */
+export function subtotalesPorGrupo(registros: EstadoRegistro[]): SubtotalGrupo[] {
+  if (!registros.some(r => r.p.grupo)) return []
+  const m = new Map<string, SubtotalGrupo>()
+  for (const r of registros) {
+    const nombre = r.p.grupo ?? 'Sin grupo'
+    const g = m.get(nombre) ?? { nombre, registros: 0, personas: 0, total: 0, pagado: 0, saldo: 0 }
+    g.registros++; g.personas += integrantes(r.p)
+    g.total = r2(g.total + r.total); g.pagado = r2(g.pagado + r.pagado); g.saldo = r2(g.saldo + r.saldo)
+    m.set(nombre, g)
+  }
+  return [...m.values()].sort((a, b) => (a.nombre === 'Sin grupo' ? 1 : 0) - (b.nombre === 'Sin grupo' ? 1 : 0) || a.nombre.localeCompare(b.nombre, 'es'))
 }

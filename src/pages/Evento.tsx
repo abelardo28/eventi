@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../data/store'
 import { porValidar, vencido } from '../domain/calc'
 import { puede } from '../domain/permisos'
@@ -13,7 +13,7 @@ import { TabActividades } from './tabs/Actividades'
 import { TabAvisos } from './tabs/Avisos'
 import { ImportarSheet } from '../sheets/ImportarSheet'
 import { EditarEventoSheet } from '../sheets/EventoSheet'
-import { IcEdit, IcUpload } from '../ui/icons'
+import { IcEdit, IcReceipt, IcUpload } from '../ui/icons'
 
 const TABS = [
   ['resumen', 'Resumen'],
@@ -44,10 +44,11 @@ export function Evento() {
         <div className="meta">
           {fCorta(ev.fecha)}{ev.fin ? ` – ${fCorta(ev.fin)}` : ''} · {ev.lugar} · {dias > 0 ? `faltan ${dias} días` : dias === 0 ? 'es hoy' : 'ya pasó'}
         </div>
-        {(puede(usuario, 'evento.editar', ev.id) || puede(usuario, 'datos.importar', ev.id)) && (
+        {puede(usuario, 'evento.ver', ev.id) && (
           <div className="evacc">
             {puede(usuario, 'evento.editar', ev.id) && <button className="btn sm ghost" onClick={() => setEditar(true)}><IcEdit />Editar evento</button>}
             {puede(usuario, 'datos.importar', ev.id) && <button className="btn sm ghost" onClick={() => setImportar(true)}><IcUpload />Importar Excel</button>}
+            {ev.personas.length > 0 && <Link className="btn sm ghost" to={`/e/${ev.id}/estado/e/todo`}><IcReceipt />Estado de cuenta</Link>}
           </div>
         )}
       </section>
