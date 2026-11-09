@@ -35,13 +35,13 @@ export function ComprobanteSheet({ ev, abonoId, onClose }: { ev: Evento; abonoId
       {a.metodo === 'Actividad' && <div className="small faint">Este abono salió de la ganancia de una actividad; para cambiarlo, bórralo y vuelve a abonar desde Actividades.</div>}
       {!puede(usuario, 'abonos.borrar', ev.id) ? null : borrar ? (
         <div className="confirm">
-          <span>¿Borrar este abono de {money(a.monto)}? No se puede deshacer.</span>
+          <span>¿Eliminar este pago de {money(a.monto)}? No se puede deshacer.</span>
           <div className="row">
-            <button type="button" className="btn sm danger" onClick={() => { if (editarEvento(ev.id, e => { e.abonos = e.abonos.filter(x => x.id !== a.id) })) { toast('Abono borrado'); onClose() } }}><IcTrash />Sí, borrar</button>
+            <button type="button" className="btn sm danger" onClick={() => { if (editarEvento(ev.id, e => { e.abonos = e.abonos.filter(x => x.id !== a.id) })) { toast('Pago eliminado'); onClose() } }}><IcTrash />Sí, eliminar</button>
             <button type="button" className="btn sm ghost" onClick={() => setBorrar(false)}>Cancelar</button>
           </div>
         </div>
-      ) : <button type="button" className="linkbtn small danger" style={{ alignSelf: 'flex-start' }} onClick={() => setBorrar(true)}>Borrar abono</button>}
+      ) : <button type="button" className="linkbtn small danger" style={{ alignSelf: 'flex-start' }} onClick={() => setBorrar(true)}>Eliminar pago</button>}
       <button className="btn ghost block" type="submit">Cerrar</button>
     </Sheet>
   )

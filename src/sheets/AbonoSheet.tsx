@@ -6,7 +6,7 @@ import { cargo, composicion, concepto, money, pagado, siguiente } from '../domai
 import { fCorta } from '../domain/fechas'
 import type { Abono, Comprobante, Evento, Metodo } from '../domain/types'
 import { puede } from '../domain/permisos'
-import { IcUpload } from '../ui/icons'
+import { IcTrash, IcUpload } from '../ui/icons'
 import { Chips } from '../ui/kit'
 import { VerComprobante } from '../ui/VerComprobante'
 import { Sheet, useToast } from '../ui/overlay'
@@ -32,6 +32,7 @@ export function AbonoSheet({ ev, personaId, conceptoId, abono, onClose }: { ev: 
   const [fecha, setFecha] = useState(abono?.fecha ?? hoy)
   const [metodo, setMetodo] = useState<Metodo>(abono?.metodo ?? 'Transferencia')
   const [comp, setComp] = useState<Comprobante | null>(abono?.comprobante ?? null)
+  const [borrar, setBorrar] = useState(false)
   const [subiendo, setSubiendo] = useState(false)
 
   const elegir = (nuevoPid: string, nuevoCid?: string) => {
@@ -110,6 +111,15 @@ export function AbonoSheet({ ev, personaId, conceptoId, abono, onClose }: { ev: 
         </div>
       )}
       <button className="btn block" type="submit" disabled={subiendo}>{abono ? 'Guardar cambios' : propuesta ? 'Enviar comprobante' : 'Guardar abono'}</button>
+      {abono && puede(usuario, 'abonos.borrar', ev.id) && (borrar ? (
+        <div className="confirm">
+          <span>¿Eliminar este pago de {money(abono.monto)}? No se puede deshacer.</span>
+          <div className="row">
+            <button type="button" className="btn sm danger" onClick={() => { if (editarEvento(ev.id, e => { e.abonos = e.abonos.filter(x => x.id !== abono.id) })) { toast('Pago eliminado'); onClose() } }}><IcTrash />Sí, eliminar</button>
+            <button type="button" className="btn sm ghost" onClick={() => setBorrar(false)}>Cancelar</button>
+          </div>
+        </div>
+      ) : <button type="button" className="linkbtn small danger" style={{ alignSelf: 'center' }} onClick={() => setBorrar(true)}>Eliminar pago</button>)}
     </Sheet>
   )
 }

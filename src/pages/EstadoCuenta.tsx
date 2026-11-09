@@ -29,6 +29,11 @@ export function EstadoCuenta() {
   // El generador de PDF se carga al abrir la página: el iPhone solo deja compartir justo después del toque
   const [pdf, setPdf] = useState<typeof import('../domain/estadoPdf') | null>(null)
   useEffect(() => { import('../domain/estadoPdf').then(setPdf, () => {}) }, [])
+  // El logo también se carga antes, para no perder el toque en el iPhone
+  const [logo, setLogo] = useState<string | null>(null)
+  useEffect(() => {
+    fetch('icono-192.png').then(r => (r.ok ? r.blob() : Promise.reject())).then(b => new Promise<string>(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.readAsDataURL(b) })).then(setLogo, () => {})
+  }, [])
   // null = todos los registros
   const [elegidos, setElegidos] = useState<Set<string> | null>(null)
   const ev = evento(id)
@@ -66,7 +71,7 @@ export function EstadoCuenta() {
   const guardarPdf = async () => {
     if (!pdf || !incluidos.length) return
     let blob: Blob
-    try { blob = pdf.estadoPdf({ ev, hoy, titulo, sub, registros, totales, ambito, grupos }) } catch { toast('No se pudo generar el PDF.'); return }
+    try { blob = pdf.estadoPdf({ ev, hoy, titulo, sub, registros, totales, ambito, grupos, logo }) } catch { toast('No se pudo generar el PDF.'); return }
     const nombre = pdf.nombreArchivo(participante || unGrupo ? `${titulo} - ${ev.nombre}` : ev.nombre)
     const archivo = new File([blob], nombre, { type: 'application/pdf' })
     // En el celular se abre el menú de compartir (Guardar en Archivos, WhatsApp, Imprimir…)

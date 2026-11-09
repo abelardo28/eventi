@@ -23,6 +23,7 @@ export function Persona() {
   const nav = useNavigate()
   const [sheet, setSheet] = useState<{ t: 'abono'; c?: string } | { t: 'editar' } | { t: 'comp'; a: string } | { t: 'abonoEd'; a: string } | null>(null)
   const [borrar, setBorrar] = useState(false)
+  const [borrarAbono, setBorrarAbono] = useState<string | null>(null)
   const ev = evento(id)
   const p = ev?.personas.find(x => x.id === pid)
   if (!ev || !p || !puedeVerPersona(usuario, ev, p)) return <NoEncontrado />
@@ -90,11 +91,21 @@ export function Persona() {
                 <span className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
                   <b className={`num ${a.estado === 'rechazado' ? 'faint' : ''}`} style={a.estado === 'rechazado' ? { textDecoration: 'line-through' } : undefined}>{money(a.monto)}</b>
                   {puedeEditarAbono(usuario, ev, a) && <button className="iconbtn sm" aria-label={`Editar abono de ${money(a.monto)}`} onClick={() => setSheet({ t: 'abonoEd', a: a.id })}><IcEdit size={14} /></button>}
+                  {can('abonos.borrar') && <button className="iconbtn sm" aria-label={`Eliminar abono de ${money(a.monto)}`} onClick={() => setBorrarAbono(a.id)}><IcTrash size={14} /></button>}
                 </span>
                 <div>{a.comprobante
                   ? <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })}>Ver comprobante</button>
                   : <button className="linkbtn small" onClick={() => setSheet({ t: 'comp', a: a.id })} style={{ color: 'var(--faint)' }}>{a.metodo === 'Efectivo' || a.metodo === 'Actividad' ? a.metodo : 'Sin comprobante'}</button>}</div>
               </span>
+              {borrarAbono === a.id && (
+                <div className="confirm" style={{ gridColumn: '1 / -1' }}>
+                  <span>¿Eliminar este pago de {money(a.monto)} ({concepto(ev, a.conceptoId)?.nombre}, {fCorta(a.fecha)})? No se puede deshacer.</span>
+                  <div className="row">
+                    <button className="btn sm danger" onClick={() => { if (editarEvento(ev.id, e => { e.abonos = e.abonos.filter(x => x.id !== a.id) })) toast('Pago eliminado'); setBorrarAbono(null) }}><IcTrash />Sí, eliminar</button>
+                    <button className="btn sm ghost" onClick={() => setBorrarAbono(null)}>Cancelar</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           {!abonos.length && <p className="muted small">Aún no hay abonos.</p>}
