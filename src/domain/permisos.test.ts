@@ -26,6 +26,14 @@ describe('permisos por rol', () => {
     expect(puede(c, 'usuarios.gestionar')).toBe(false)
     expect(puede(c, 'conceptos.gestionar', 'e1')).toBe(false)
   })
+  it('el auditor solo consulta, y solo sus eventos asignados', () => {
+    const a = u('auditor', { eventos: ['e1'] })
+    expect(puede(a, 'evento.ver', 'e1')).toBe(true)
+    expect(puede(a, 'evento.ver', 'e2')).toBe(false)
+    for (const x of ['abonos.registrar', 'abonos.validar', 'abonos.borrar', 'personas.gestionar', 'conceptos.gestionar', 'actividades.movimientos', 'avisos.enviar', 'evento.editar', 'usuarios.gestionar'] as const)
+      expect(puede(a, x, 'e1')).toBe(false)
+  })
+
   it('el capturista solo trabaja en sus eventos asignados', () => {
     const c = u('capturista', { eventos: ['e1'] })
     expect(puede(c, 'abonos.registrar', 'e1')).toBe(true)

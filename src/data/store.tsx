@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import type { Db, Evento, Rol, Usuario } from '../domain/types'
 import { hoyISO } from '../domain/fechas'
 import { hashPassword, normalizarEmail, verificarPassword } from '../domain/auth'
-import { quedaAdmin } from '../domain/permisos'
+import { conAlcance, quedaAdmin } from '../domain/permisos'
 import { telefonoWhatsApp } from '../domain/mensajes'
 import { marcarLeidas } from '../domain/notificaciones'
 import { datosEjemplo } from './seed'
@@ -75,7 +75,7 @@ export function StoreProvider({ children, repo = repoLocal }: { children: ReactN
     const { hash, salt } = await hashPassword(d.password)
     return {
       id: uid('u'), nombre: d.nombre.trim(), email, telefono: d.telefono.trim(), rol: d.rol, activo: true,
-      eventos: d.rol === 'capturista' ? d.eventos ?? null : null, hash, salt, debeCambiarPassword: !!d.temporal, creado: hoy,
+      eventos: conAlcance(d.rol) ? d.eventos ?? null : null, hash, salt, debeCambiarPassword: !!d.temporal, creado: hoy,
     }
   }, [hoy])
 
@@ -134,7 +134,7 @@ export function StoreProvider({ children, repo = repoLocal }: { children: ReactN
       const email = cambios.email != null ? normalizarEmail(cambios.email) : actual.email
       if (get().usuarios.some(u => u.id !== id && u.email === email)) return 'Ya existe una cuenta con ese correo.'
       const cambiado: Usuario = { ...actual, ...cambios, email }
-      if (cambiado.rol !== 'capturista') cambiado.eventos = null
+      if (!conAlcance(cambiado.rol)) cambiado.eventos = null
       if (!quedaAdmin(get().usuarios, cambiado)) return 'Debe quedar al menos un administrador activo.'
       // Si deja de ser participante, se desvincula de sus registros
       const eventos = cambiado.rol === 'participante' ? get().eventos

@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useStore } from '../data/store'
 import { emailValido, passwordTemporal } from '../domain/auth'
-import { ROLES } from '../domain/permisos'
+import { conAlcance, ROLES } from '../domain/permisos'
 import type { Rol, Usuario } from '../domain/types'
 import { Toggle } from '../ui/kit'
 import { Sheet, useToast } from '../ui/overlay'
 
-const ROLES_LISTA: Rol[] = ['admin', 'capturista', 'participante']
+const ROLES_LISTA: Rol[] = ['admin', 'capturista', 'auditor', 'participante']
 
 /** Alta y edición de usuarios (solo administrador). */
 export function UsuarioSheet({ usuario, onClose }: { usuario?: Usuario; onClose: () => void }) {
@@ -44,8 +44,8 @@ export function UsuarioSheet({ usuario, onClose }: { usuario?: Usuario; onClose:
     setError(null)
     if (!nombre.trim()) { setError('Escribe el nombre.'); return }
     if (!emailValido(email)) { setError('Escribe un correo válido.'); return }
-    if (rol === 'capturista' && !todos && eventos.length === 0) { setError('Elige al menos un evento para el capturista.'); return }
-    const alcance = rol === 'capturista' ? (todos ? null : eventos) : null
+    if (conAlcance(rol) && !todos && eventos.length === 0) { setError(`Elige al menos un evento para el ${rol}.`); return }
+    const alcance = conAlcance(rol) ? (todos ? null : eventos) : null
     if (usuario) {
       const r = editarUsuario(usuario.id, { nombre, email, telefono, rol, activo, eventos: alcance })
       if (r) { setError(r); return }
@@ -111,9 +111,9 @@ export function UsuarioSheet({ usuario, onClose }: { usuario?: Usuario; onClose:
         </div>
       </div>
 
-      {rol === 'capturista' && (
+      {conAlcance(rol) && (
         <div className="stack" style={{ gap: 8 }}>
-          <div className="between"><span className="small">Puede trabajar en todos los eventos</span><Toggle id="us-todos" checked={todos} onChange={setTodos} label="Todos los eventos" /></div>
+          <div className="between"><span className="small">{rol === 'auditor' ? 'Puede consultar todos los eventos' : 'Puede trabajar en todos los eventos'}</span><Toggle id="us-todos" checked={todos} onChange={setTodos} label="Todos los eventos" /></div>
           {!todos && db.eventos.map(ev => (
             <div key={ev.id} className="between">
               <span className="small">{ev.nombre}</span>

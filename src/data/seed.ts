@@ -10,6 +10,7 @@ const HASH_DEMO = { hash: '3lFl2SbtisXL1OENpQqFmfAvKvzfNpElaT+rwRRo/Iw=', salt: 
 export const CUENTAS_DEMO = [
   { email: 'admin@eventi.demo', rol: 'admin', nombre: 'Abelardo (administrador)' },
   { email: 'capturista@eventi.demo', rol: 'capturista', nombre: 'Rosa Medina (capturista)' },
+  { email: 'auditor@eventi.demo', rol: 'auditor', nombre: 'Jorge Ruiz (auditor)' },
   { email: 'luis@eventi.demo', rol: 'participante', nombre: 'Luis Hernández (participante)' },
 ] as const
 

@@ -6,6 +6,8 @@ import type { Abono, Evento, Persona, Rol, Usuario } from './types'
  * - Administrador: todo, incluidos usuarios, eventos, conceptos, tarifas y borrar registros.
  * - Capturista: registra y valida abonos, agrega y edita personas, registra gastos e ingresos
  *   de actividades y manda recordatorios, solo en los eventos que tiene asignados. No borra nada.
+ * - Auditor: solo consulta. Ve eventos, personas, abonos, comprobantes, actividades y estados de
+ *   cuenta de los eventos asignados, pero no registra, valida, edita ni borra nada.
  * - Participante: ve solo su estado de cuenta y sube comprobantes, que quedan por validar.
  */
 export type Accion =
@@ -40,26 +42,31 @@ const TABLA: Record<Rol, readonly Accion[]> = {
     'evento.ver', 'personas.gestionar', 'abonos.registrar', 'abonos.validar',
     'actividades.movimientos', 'avisos.enviar',
   ],
+  auditor: ['evento.ver'],
   participante: ['abonos.proponer'],
 }
 
 export const ROLES: Record<Rol, { nombre: string; descripcion: string }> = {
   admin: { nombre: 'Administrador', descripcion: 'Controla todo: eventos, conceptos, usuarios y puede borrar registros.' },
   capturista: { nombre: 'Capturista', descripcion: 'Registra y valida abonos, personas, gastos e ingresos en sus eventos. No borra.' },
+  auditor: { nombre: 'Auditor', descripcion: 'Solo consulta: ve toda la información de sus eventos y saca estados de cuenta. No edita ni borra.' },
   participante: { nombre: 'Participante', descripcion: 'Ve su estado de cuenta y sube sus comprobantes para que los validen.' },
 }
 
-/** El capturista solo trabaja en los eventos que tiene asignados (null = todos). */
+/** Roles que se limitan a los eventos asignados (null = todos). */
+export const conAlcance = (r: Rol) => r === 'capturista' || r === 'auditor'
+
+/** El capturista y el auditor solo ven los eventos que tienen asignados (null = todos). */
 export function tieneEvento(u: Usuario, eventoId: string | undefined): boolean {
   if (u.rol === 'admin') return true
-  if (u.rol === 'capturista') return !eventoId || u.eventos === null || u.eventos.includes(eventoId)
+  if (conAlcance(u.rol)) return !eventoId || u.eventos === null || u.eventos.includes(eventoId)
   return false
 }
 
 export function puede(u: Usuario | null | undefined, accion: Accion, eventoId?: string): boolean {
   if (!u || !u.activo) return false
   if (!TABLA[u.rol].includes(accion)) return false
-  if (eventoId && u.rol === 'capturista') return tieneEvento(u, eventoId)
+  if (eventoId && conAlcance(u.rol)) return tieneEvento(u, eventoId)
   return true
 }
 

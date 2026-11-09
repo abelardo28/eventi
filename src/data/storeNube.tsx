@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { Db, Evento, Usuario } from '../domain/types'
 import { hoyISO } from '../domain/fechas'
 import { normalizarEmail } from '../domain/auth'
-import { quedaAdmin } from '../domain/permisos'
+import { conAlcance, quedaAdmin } from '../domain/permisos'
 import { marcarLeidas } from '../domain/notificaciones'
 import { aUsuario, clienteSinSesion, desuscribirPush, errorAuth, sb, subirComprobantes, type Perfil } from './nube'
 import { repoLocal } from './repo'
@@ -228,7 +228,7 @@ export function StoreNubeProvider({ children }: { children: ReactNode }) {
       if (e) return errorAuth(e.message)
       if (!data.user || !data.user.identities?.length) return 'Ya existe una cuenta con ese correo.'
       try {
-        await actualizarPerfil(data.user.id, { rol: d.rol, eventos: d.rol === 'capturista' ? d.eventos ?? null : null, debe_cambiar_password: !!d.temporal })
+        await actualizarPerfil(data.user.id, { rol: d.rol, eventos: conAlcance(d.rol) ? d.eventos ?? null : null, debe_cambiar_password: !!d.temporal })
       } catch (x) { return (x as Error).message }
       if (uid) await cargar(uid)
       return null
@@ -239,7 +239,7 @@ export function StoreNubeProvider({ children }: { children: ReactNode }) {
       if (!actual) return 'No se encontró el usuario.'
       if (cambios.email != null && normalizarEmail(cambios.email) !== actual.email) return 'El correo de una cuenta no se puede cambiar desde aquí.'
       const cambiado: Usuario = { ...actual, ...cambios, email: actual.email }
-      if (cambiado.rol !== 'capturista') cambiado.eventos = null
+      if (!conAlcance(cambiado.rol)) cambiado.eventos = null
       if (!quedaAdmin(ref.current.usuarios, cambiado)) return 'Debe quedar al menos un administrador activo.'
       poner({ ...ref.current, usuarios: ref.current.usuarios.map(u => (u.id === id ? cambiado : u)) })
       actualizarPerfil(id, { nombre: cambiado.nombre.trim(), telefono: cambiado.telefono.trim(), rol: cambiado.rol, activo: cambiado.activo, eventos: cambiado.eventos })

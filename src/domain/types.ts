@@ -143,7 +143,7 @@ export interface Evento {
   envios: Envio[]
 }
 
-export type Rol = 'admin' | 'capturista' | 'participante'
+export type Rol = 'admin' | 'capturista' | 'auditor' | 'participante'
 
 export interface Usuario {
   id: string

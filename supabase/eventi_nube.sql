@@ -12,9 +12,9 @@ create table if not exists public.perfiles (
   nombre text not null default '',
   email text not null default '',
   telefono text not null default '',
-  rol text not null default 'participante' check (rol in ('admin', 'capturista', 'participante')),
+  rol text not null default 'participante' check (rol in ('admin', 'capturista', 'auditor', 'participante')),
   activo boolean not null default true,
-  -- Capturista: eventos que puede trabajar; null = todos
+  -- Capturista y auditor: eventos asignados; null = todos
   eventos text[],
   debe_cambiar_password boolean not null default false,
   creado date not null default current_date,
@@ -47,9 +47,19 @@ language sql stable security definer set search_path = public as $$
   )
 $$;
 
+-- Quien puede ver un evento: el equipo que lo trabaja y el auditor (solo lectura)
+create or replace function public.es_lector_de(p_evento text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from perfiles
+    where id = auth.uid() and activo
+      and (rol = 'admin' or (rol in ('capturista', 'auditor') and (eventos is null or p_evento = any (eventos))))
+  )
+$$;
+
 create or replace function public.es_staff() returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists (select 1 from perfiles where id = auth.uid() and activo and rol in ('admin', 'capturista'))
+  select exists (select 1 from perfiles where id = auth.uid() and activo and rol in ('admin', 'capturista', 'auditor'))
 $$;
 
 -- Últimos 10 dígitos de un teléfono (para vincular por WhatsApp)
@@ -131,7 +141,7 @@ drop policy if exists perfiles_editar on public.perfiles;
 create policy perfiles_editar on public.perfiles for update using (id = auth.uid() or es_admin());
 
 drop policy if exists eventos_ver on public.eventos;
-create policy eventos_ver on public.eventos for select using (es_staff_de(id));
+create policy eventos_ver on public.eventos for select using (es_lector_de(id));
 drop policy if exists eventos_crear on public.eventos;
 create policy eventos_crear on public.eventos for insert with check (es_admin());
 drop policy if exists eventos_editar on public.eventos;
@@ -182,7 +192,7 @@ end $$;
 grant usage on schema public to anon, authenticated;
 grant select, update on public.perfiles to authenticated;
 grant select, insert, update, delete on public.eventos to authenticated;
-grant execute on function public.es_admin(), public.es_staff_de(text), public.es_staff(), public.tel10(text),
+grant execute on function public.es_admin(), public.es_staff_de(text), public.es_lector_de(text), public.es_staff(), public.tel10(text),
   public.mis_eventos(), public.proponer_abono(text, jsonb) to authenticated;
 revoke all on function public.vincular_por_telefono(uuid, text) from public, anon, authenticated;
 

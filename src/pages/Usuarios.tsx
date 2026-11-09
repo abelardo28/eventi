@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useStore } from '../data/store'
-import { misRegistros, puede, ROLES } from '../domain/permisos'
+import { conAlcance, misRegistros, puede, ROLES } from '../domain/permisos'
 import type { Rol, Usuario } from '../domain/types'
 import { IcPlus, IcEdit } from '../ui/icons'
 import { Avatar, Topbar } from '../ui/kit'
 import { UsuarioSheet } from '../sheets/UsuarioSheet'
 
-const ORDEN: Rol[] = ['admin', 'capturista', 'participante']
+const ORDEN: Rol[] = ['admin', 'capturista', 'auditor', 'participante']
 
 export function Usuarios() {
   const { db, usuario } = useStore()
@@ -33,7 +33,7 @@ export function Usuarios() {
       <section className="glass panel" style={{ paddingBlock: 6 }}>
         <div className="list">
           {lista.map(u => {
-            const alcance = u.rol === 'capturista'
+            const alcance = conAlcance(u.rol)
               ? (u.eventos === null ? 'Todos los eventos' : `${u.eventos.length} evento${u.eventos.length === 1 ? '' : 's'}`)
               : u.rol === 'participante'
                 ? (() => { const r = misRegistros(db.eventos, u); return r.length ? r.map(x => x.p.nombre).join(', ') : 'Sin vincular a un registro' })()
