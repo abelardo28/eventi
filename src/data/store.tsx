@@ -27,7 +27,8 @@ export interface Store {
   empezarVacio: () => void
   // Cuentas
   iniciarSesion: (email: string, password: string) => Promise<string | null>
-  registrarse: (datos: Omit<NuevoUsuario, 'rol'>) => Promise<string | null>
+  /** En la nube, quien se registra crea su organización (organizacion = su nombre). */
+  registrarse: (datos: Omit<NuevoUsuario, 'rol'> & { organizacion?: string }) => Promise<string | null>
   cerrarSesion: () => void
   crearUsuario: (datos: NuevoUsuario) => Promise<string | null>
   editarUsuario: (id: string, cambios: CambiosUsuario) => string | null
@@ -40,6 +41,9 @@ export interface Store {
   subirDatosLocales?: () => Promise<string>
   /** Solo en la nube: manda al correo del usuario un enlace para elegir contraseña nueva. */
   enviarRestablecer?: (email: string) => Promise<string | null>
+  /** Solo en la nube: nombre de la organización de la cuenta y cómo cambiarlo (administrador). */
+  organizacion?: string | null
+  renombrarOrganizacion?: (nombre: string) => Promise<string | null>
 }
 
 export const Ctx = createContext<Store | null>(null)

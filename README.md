@@ -52,9 +52,13 @@ supabase/       Esquema de Supabase (eventi_nube.sql), avisos push (eventi_push.
 
 ## Siguientes pasos
 
-1. **Conectar el proyecto de Supabase:** correr `supabase/eventi_nube.sql`, desactivar *Confirm email* (para que las cuentas que crea el administrador entren de inmediato), poner la *Site URL* del sitio publicado y llenar `src/nube.config.ts`.
+1. **Conectar el proyecto de Supabase:** correr `supabase/eventi_nube.sql` (y luego `eventi_push.sql`), desactivar *Confirm email* (para que las cuentas que crea el administrador entren de inmediato), poner la *Site URL* del sitio publicado y llenar `src/nube.config.ts`.
 2. **Recordatorios automáticos:** una tarea programada diaria (Supabase cron / Edge Function) que recorra la cola (`cola()` en `src/domain/calc.ts`) y envíe por la API de WhatsApp Business (Meta Cloud API o Twilio). Requiere plantillas de mensaje aprobadas por Meta.
 3. **Avisos push de vencimientos:** los avisos de pagos (comprobante enviado, pago registrado, validado o rechazado) ya llegan con la app cerrada; falta mandar por push los de pagos por vencer desde la tarea diaria.
+
+## Organizaciones (nube)
+
+Cada cuenta que se registra sola crea su propia organización y queda como su administrador. Eventos, personas, pagos, comprobantes y usuarios pertenecen a una organización y las políticas de Supabase impiden ver lo de otra. Los usuarios que da de alta un administrador entran a su organización con una invitación (`crear_invitacion`), válida 7 días y solo para ese correo.
 
 ## Avisos push
 

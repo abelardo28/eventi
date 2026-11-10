@@ -15,6 +15,7 @@ export function Acceso() {
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [telefono, setTelefono] = useState('')
+  const [organizacion, setOrganizacion] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -33,7 +34,7 @@ export function Acceso() {
     }
     fijarRecordar(recordar)
     setCargando(true)
-    const r = modo === 'entrar' ? await iniciarSesion(email, password) : await registrarse({ nombre, email, telefono, password })
+    const r = modo === 'entrar' ? await iniciarSesion(email, password) : await registrarse({ nombre, email, telefono, password, organizacion })
     setCargando(false)
     if (r) setError(r)
   }
@@ -61,11 +62,12 @@ export function Acceso() {
           )}
 
         {modo === 'registro' && <label className="f">Nombre<input className="inp" id="ac-nombre" autoComplete="name" value={nombre} onChange={e => setNombre(e.target.value)} /></label>}
+        {modo === 'registro' && nube && <label className="f">Nombre de tu organización<input className="inp" id="ac-org" autoComplete="organization" value={organizacion} onChange={e => setOrganizacion(e.target.value)} placeholder="Ej. Liga de Béisbol Mazatlán" /></label>}
         <label className="f">Correo<input className="inp" id="ac-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
         {modo === 'registro' && (
           <label className="f">WhatsApp
             <input className="inp" id="ac-tel" type="tel" inputMode="tel" autoComplete="tel" value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="10 dígitos" />
-            {!primera && <span className="small faint" style={{ fontWeight: 500 }}>Usa el número que diste al organizador para ver tus pagos al instante.</span>}
+            {!primera && !nube && <span className="small faint" style={{ fontWeight: 500 }}>Usa el número que diste al organizador para ver tus pagos al instante.</span>}
           </label>
         )}
         <label className="f">Contraseña
@@ -76,7 +78,9 @@ export function Acceso() {
         {error && <div className="small neg" role="alert">{error}</div>}
         {aviso && <div className="small pos" role="status">{aviso}</div>}
         <button className="btn block" type="submit" disabled={cargando}>{cargando ? 'Un momento…' : modo === 'entrar' ? 'Entrar' : 'Crear cuenta'}</button>
-        {modo === 'registro' && !primera && <div className="small faint">Las cuentas nuevas entran como participante. El administrador puede cambiarte el rol.{nube && ' La primera cuenta que se crea es la del administrador.'}</div>}
+        {modo === 'registro' && !primera && <div className="small faint">{nube
+          ? 'Se crea tu organización y entras como administrador. Tus eventos, personas y pagos solo los ven las cuentas que tú des de alta. Si alguien ya te dio de alta, no crees otra cuenta: entra con el correo y la contraseña que te mandó.'
+          : 'Las cuentas nuevas entran como participante. El administrador puede cambiarte el rol.'}</div>}
         {nube && modo === 'entrar' && <button type="button" className="linkbtn small" style={{ alignSelf: 'center' }} onClick={olvide}>Olvidé mi contraseña</button>}
       </form>
 

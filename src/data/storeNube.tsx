@@ -36,6 +36,7 @@ export function StoreNubeProvider({ children }: { children: ReactNode }) {
   const versiones = useRef<Record<string, number>>({})
   const [error, setError] = useState<string | null>(null)
   const [recuperando, setRecuperando] = useState(false)
+  const [org, setOrg] = useState<{ id: string; nombre: string } | null>(null)
 
   const poner = useCallback((next: Db) => {
     ref.current = next
@@ -49,6 +50,7 @@ export function StoreNubeProvider({ children }: { children: ReactNode }) {
     const { data: perfiles, error: e1 } = await nube.from('perfiles').select('*')
     if (e1) { setError('No se pudieron cargar los datos: ' + e1.message); return }
     const usuarios = (perfiles as Perfil[]).map(aUsuario)
+    nube.from('organizaciones').select('id, nombre').maybeSingle().then(({ data }) => setOrg(data ?? null), () => {})
     const propio = usuarios.find(u => u.id === id)
     let filas: Fila[] = []
     if (propio?.rol === 'participante') {
@@ -210,7 +212,7 @@ export function StoreNubeProvider({ children }: { children: ReactNode }) {
     registrarse: async d => {
       const { data, error: e } = await nube.auth.signUp({
         email: normalizarEmail(d.email), password: d.password,
-        options: { data: { nombre: d.nombre.trim(), telefono: d.telefono.trim() }, emailRedirectTo: location.origin + location.pathname },
+        options: { data: { nombre: d.nombre.trim(), telefono: d.telefono.trim(), organizacion: d.organizacion?.trim() || d.nombre.trim() }, emailRedirectTo: location.origin + location.pathname },
       })
       if (e) return errorAuth(e.message)
       if (data.user && !data.user.identities?.length) return 'Ya existe una cuenta con ese correo.'
@@ -221,15 +223,17 @@ export function StoreNubeProvider({ children }: { children: ReactNode }) {
 
     crearUsuario: async d => {
       if (yo()?.rol !== 'admin') return 'Solo el administrador puede crear usuarios.'
+      // La invitación hace que la cuenta nueva entre a esta organización con su rol (y no cree una propia)
+      const { data: invitacion, error: e0 } = await nube.rpc('crear_invitacion', {
+        p_email: normalizarEmail(d.email), p_rol: d.rol, p_eventos: conAlcance(d.rol) ? d.eventos ?? null : null, p_temporal: !!d.temporal,
+      })
+      if (e0 || !invitacion) return 'No se pudo preparar la cuenta: ' + (e0?.message ?? 'sin respuesta del servidor')
       const { data, error: e } = await clienteSinSesion().auth.signUp({
         email: normalizarEmail(d.email), password: d.password,
-        options: { data: { nombre: d.nombre.trim(), telefono: d.telefono.trim(), temporal: !!d.temporal }, emailRedirectTo: location.origin + location.pathname },
+        options: { data: { nombre: d.nombre.trim(), telefono: d.telefono.trim(), invitacion }, emailRedirectTo: location.origin + location.pathname },
       })
       if (e) return errorAuth(e.message)
       if (!data.user || !data.user.identities?.length) return 'Ya existe una cuenta con ese correo.'
-      try {
-        await actualizarPerfil(data.user.id, { rol: d.rol, eventos: conAlcance(d.rol) ? d.eventos ?? null : null, debe_cambiar_password: !!d.temporal })
-      } catch (x) { return (x as Error).message }
       if (uid) await cargar(uid)
       return null
     },
@@ -266,6 +270,15 @@ export function StoreNubeProvider({ children }: { children: ReactNode }) {
       const { error: e } = await nube.auth.resetPasswordForEmail(normalizarEmail(email), { redirectTo: location.origin + location.pathname })
       return e ? errorAuth(e.message) : null
     },
+    organizacion: org?.nombre ?? null,
+    renombrarOrganizacion: async nombre => {
+      if (!org || yo()?.rol !== 'admin') return 'Solo el administrador puede cambiar el nombre.'
+      if (!nombre.trim()) return 'Escribe un nombre.'
+      const { error: e } = await nube.from('organizaciones').update({ nombre: nombre.trim() }).eq('id', org.id)
+      if (e) return e.message
+      setOrg({ ...org, nombre: nombre.trim() })
+      return null
+    },
     marcarLeidas: ids => {
       const actual = yo()
       if (!actual) return
@@ -294,7 +307,7 @@ export function StoreNubeProvider({ children }: { children: ReactNode }) {
       return [subidos && `${subidos} ${subidos === 1 ? 'evento subido' : 'eventos subidos'}`, omitidos && `${omitidos} ya estaba${omitidos === 1 ? '' : 'n'} en la nube`].filter(Boolean).join(' · ') || 'Nada que subir.'
     },
   }
-  }, [db, hoy, visible, error, uid, poner, proponer, guardarEvento, fallo, actualizarPerfil, cargar, nube])
+  }, [db, hoy, visible, error, uid, org, poner, proponer, guardarEvento, fallo, actualizarPerfil, cargar, nube])
 
   if (!listo) return <div className="cargando" role="status">Cargando…</div>
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>

@@ -7,11 +7,12 @@ import { Sheet, useToast } from '../ui/overlay'
 
 /** Menú de la cuenta: datos, usuarios (admin), contraseña, datos del dispositivo y salir. */
 export function CuentaSheet({ onClose }: { onClose: () => void }) {
-  const { usuario, nube, cerrarSesion, cambiarPassword, restablecer, empezarVacio, subirDatosLocales } = useStore()
+  const { usuario, nube, cerrarSesion, cambiarPassword, restablecer, empezarVacio, subirDatosLocales, organizacion, renombrarOrganizacion } = useStore()
   const [subiendo, setSubiendo] = useState(false)
   const { toast } = useToast()
   const nav = useNavigate()
-  const [vista, setVista] = useState<'menu' | 'password' | 'datos'>('menu')
+  const [vista, setVista] = useState<'menu' | 'password' | 'datos' | 'org'>('menu')
+  const [nombreOrg, setNombreOrg] = useState(organizacion ?? '')
   const [p1, setP1] = useState('')
   const [p2, setP2] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -24,13 +25,19 @@ export function CuentaSheet({ onClose }: { onClose: () => void }) {
     try { await cambiarPassword(usuario.id, p1) } catch (x) { setError((x as Error).message); return }
     toast('Contraseña actualizada'); onClose()
   }
+  const guardarOrg = async () => {
+    const r = await renombrarOrganizacion!(nombreOrg)
+    if (r) { setError(r); return }
+    toast('Nombre actualizado'); setVista('menu')
+  }
 
   return (
-    <Sheet title={usuario.nombre} onClose={onClose} onSubmit={vista === 'password' ? guardarPassword : undefined}>
-      <div className="small muted">{usuario.email} · {ROLES[usuario.rol].nombre}</div>
+    <Sheet title={usuario.nombre} onClose={onClose} onSubmit={vista === 'password' ? guardarPassword : vista === 'org' ? guardarOrg : undefined}>
+      <div className="small muted">{usuario.email} · {ROLES[usuario.rol].nombre}{organizacion && ` · ${organizacion}`}</div>
       {vista === 'menu' && (
         <div className="menu">
           {puede(usuario, 'usuarios.gestionar') && <button type="button" onClick={() => { onClose(); nav('/usuarios') }}>Usuarios y roles</button>}
+          {nube && usuario.rol === 'admin' && <button type="button" onClick={() => { setError(null); setVista('org') }}>Nombre de la organización</button>}
           <button type="button" onClick={() => setVista('password')}>Cambiar contraseña</button>
           {puede(usuario, 'datos.restablecer') && <button type="button" onClick={() => setVista('datos')}>{nube ? 'Subir datos de este dispositivo' : 'Datos de este dispositivo'}</button>}
           <button type="button" className="danger" onClick={() => { cerrarSesion(); onClose(); nav('/') }}>Cerrar sesión</button>
@@ -44,10 +51,18 @@ export function CuentaSheet({ onClose }: { onClose: () => void }) {
           <button className="btn block" type="submit">Guardar contraseña</button>
         </>
       )}
+      {vista === 'org' && (
+        <>
+          <label className="f">Nombre de tu organización<input className="inp" id="cu-org" value={nombreOrg} onChange={e => setNombreOrg(e.target.value)} placeholder="Ej. Liga de Béisbol Mazatlán" /></label>
+          <div className="small faint">Todo lo de tu organización (eventos, personas, pagos y usuarios) solo lo ven tú y las cuentas que des de alta.</div>
+          {error && <div className="small neg">{error}</div>}
+          <button className="btn block" type="submit">Guardar</button>
+        </>
+      )}
       {vista === 'datos' && nube && (
         <div className="stack">
           <div className="small muted">Ahora los datos se guardan en la nube y se ven igual en todos tus dispositivos. Si capturaste eventos en este dispositivo antes de conectarlo, súbelos aquí. Los que ya estén en la nube no se tocan.</div>
-          <div className="small faint">Las cuentas de este dispositivo no se suben: cada persona crea su cuenta en la nube y se vincula sola por su WhatsApp.</div>
+          <div className="small faint">Las cuentas de este dispositivo no se suben: da de alta a cada persona en Usuarios y se vincula sola por su WhatsApp.</div>
           <button type="button" className="btn" style={{ alignSelf: 'flex-start' }} disabled={subiendo} onClick={async () => {
             setSubiendo(true)
             try { toast(await subirDatosLocales!()) } catch (e) { toast((e as Error).message) } finally { setSubiendo(false) }

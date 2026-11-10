@@ -71,6 +71,12 @@ language sql immutable as $$
   select '$' || case when n = trunc(n) then to_char(n, 'FM999,999,999,990') else to_char(n, 'FM999,999,999,990.00') end
 $$;
 
+-- Texto a uuid sin fallar (los datos subidos desde un dispositivo traen ids locales)
+create or replace function public.a_uuid(t text) returns uuid
+language sql immutable as $$
+  select case when t ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then t::uuid end
+$$;
+
 create or replace function public.avisos_de_evento() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
@@ -88,9 +94,9 @@ begin
     select x into p from jsonb_array_elements(coalesce(new.datos->'personas', '[]')) x where x->>'id' = a->>'personaId';
     if p is null then continue; end if;
     persona := p->>'nombre';
-    dueno := nullif(p->>'usuarioId', '')::uuid;
-    quien := nullif(a->>'registradoPor', '')::uuid;
-    validador := nullif(a->>'validadoPor', '')::uuid;
+    dueno := a_uuid(p->>'usuarioId');
+    quien := a_uuid(a->>'registradoPor');
+    validador := a_uuid(a->>'validadoPor');
     ruta := '/e/' || new.id || '/p/' || (p->>'id');
     base := dinero((a->>'monto')::numeric) || ' de ' || coalesce(
       (select c->>'nombre' from jsonb_array_elements(coalesce(new.datos->'conceptos', '[]')) c where c->>'id' = a->>'conceptoId'), 'un concepto');
@@ -100,7 +106,7 @@ begin
       insert into push_cola (usuario, titulo, texto, ruta, etiqueta)
       select f.id, persona || ' envió un comprobante', base || ' · falta validarlo', ruta, 'reg:' || (a->>'id')
       from perfiles f
-      where f.activo and f.id is distinct from quien
+      where f.activo and f.org = new.org and f.id is distinct from quien
         and (f.rol = 'admin' or (f.rol = 'capturista' and (f.eventos is null or new.id = any (f.eventos))));
       nuevos := nuevos + 1;
 
@@ -112,7 +118,7 @@ begin
         case when f.id = dueno then base || ' · ' || lower(coalesce(a->>'metodo', '')) else persona || ' · ' || base end,
         ruta, 'reg:' || (a->>'id')
       from perfiles f
-      where f.activo and f.id is distinct from quien and (f.id = dueno or f.rol = 'admin');
+      where f.activo and f.org = new.org and f.id is distinct from quien and (f.id = dueno or f.rol = 'admin');
       nuevos := nuevos + 1;
 
     elsif v is not null and a->>'estado' in ('validado', 'rechazado') and v->>'estado' = 'pendiente' then
@@ -124,7 +130,7 @@ begin
              else base || ' · ' || coalesce(nullif(a->>'motivoRechazo', ''), 'sin motivo') || '. Puedes enviarlo de nuevo.' end,
         ruta, 'res:' || (a->>'id')
       from perfiles f
-      where f.activo and f.id is distinct from validador and (f.id = dueno or f.id = quien);
+      where f.activo and f.org = new.org and f.id is distinct from validador and (f.id = dueno or f.id = quien);
       nuevos := nuevos + 1;
     end if;
   end loop;
@@ -144,4 +150,4 @@ create trigger avisos_de_evento after update on public.eventos
   for each row when (old.datos->'abonos' is distinct from new.datos->'abonos')
   execute function public.avisos_de_evento();
 
-revoke all on function public.avisos_de_evento(), public.dinero(numeric) from public, anon, authenticated;
+revoke all on function public.avisos_de_evento(), public.dinero(numeric), public.a_uuid(text) from public, anon, authenticated;
