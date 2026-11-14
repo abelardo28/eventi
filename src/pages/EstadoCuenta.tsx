@@ -36,6 +36,8 @@ export function EstadoCuenta() {
   }, [])
   // null = todos los registros
   const [elegidos, setElegidos] = useState<Set<string> | null>(null)
+  // null = todos los conceptos
+  const [cElegidos, setCElegidos] = useState<Set<string> | null>(null)
   const ev = evento(id)
   const participante = usuario?.rol === 'participante'
   if (!ev || !(participante || puede(usuario, 'evento.ver', ev.id))) return <NoEncontrado />
@@ -53,10 +55,21 @@ export function EstadoCuenta() {
   const hayGrupos = orden.some(p => p.grupo)
   const porGrupo = [...new Set(orden.map(p => p.grupo ?? ''))].map(g => ({ g, ps: orden.filter(p => (p.grupo ?? '') === g) }))
 
-  const incluidos = orden.filter(p => sel.has(p.id))
-  const todo = incluidos.length === orden.length && !participante
+  // Conceptos que aparecen en estos registros (cargos o abonos)
+  const usados = new Set([...visibles.flatMap(p => p.cargos.map(g => g.conceptoId)), ...ev.abonos.filter(a => visibles.some(p => p.id === a.personaId)).map(a => a.conceptoId)])
+  const lista = ev.conceptos.filter(c => usados.has(c.id))
+  const cSel = cElegidos ?? new Set(lista.map(c => c.id))
+  const cIncluidos = lista.filter(c => cSel.has(c.id))
+  const todosConceptos = cIncluidos.length === lista.length
+  const elegirConcepto = (cid: string, v: boolean) => { const n = new Set(cSel); if (v) n.add(cid); else n.delete(cid); setCElegidos(n) }
+
+  const marcados = orden.filter(p => sel.has(p.id))
+  // Con un filtro de conceptos se quitan los registros que no tienen nada de esos conceptos
+  const conAlgo = (p: (typeof orden)[number]) => p.cargos.some(g => cSel.has(g.conceptoId)) || ev.abonos.some(a => a.personaId === p.id && cSel.has(a.conceptoId))
+  const incluidos = todosConceptos ? marcados : marcados.filter(conAlgo)
+  const todo = marcados.length === orden.length && !participante
   const unGrupo = !todo && !participante && incluidos.length > 0 && incluidos.every(p => p.grupo && p.grupo === incluidos[0].grupo) ? incluidos[0].grupo! : null
-  const est = estadoGrupo(ev, incluidos, hoy)
+  const est = estadoGrupo(ev, incluidos, hoy, todosConceptos ? undefined : cSel)
   const registros: EstadoRegistro[] = est.registros
   const totales = est
   const ambito: 'grupo' | 'evento' | 'seleccion' = todo ? 'evento' : unGrupo ? 'grupo' : 'seleccion'
@@ -64,7 +77,8 @@ export function EstadoCuenta() {
   const grupos: SubtotalGrupo[] = sg.length > 1 && !participante ? sg : []
   const cuantos = `${plural(incluidos.length, 'registro', 'registros')} · ${plural(incluidos.reduce((s, x) => s + integrantes(x), 0), 'persona', 'personas')}`
   const titulo = participante ? (incluidos.length === 1 ? incluidos[0].nombre : usuario!.nombre) : unGrupo ?? ev.nombre
-  const sub = participante ? `${incluidos.length === 1 ? 'Mi registro' : 'Mis registros'} · ${cuantos}` : todo ? `Todo el evento · ${cuantos}` : unGrupo ? `Grupo · ${cuantos}` : `Selección · ${cuantos}`
+  const deConceptos = todosConceptos ? '' : ` · ${cIncluidos.length === 1 ? 'Concepto' : 'Conceptos'}: ${cIncluidos.map(c => c.nombre).join(', ')}`
+  const sub = (participante ? `${incluidos.length === 1 ? 'Mi registro' : 'Mis registros'} · ${cuantos}` : todo ? `Todo el evento · ${cuantos}` : unGrupo ? `Grupo · ${cuantos}` : `Selección · ${cuantos}`) + deConceptos
   const t = totales
   const tactil = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
 
@@ -93,12 +107,30 @@ export function EstadoCuenta() {
         <button className="btn" onClick={guardarPdf} disabled={!pdf || !incluidos.length}><IcUpload />{tactil ? 'Compartir o guardar PDF' : 'Descargar PDF'}</button>
       </div>
 
+      {lista.length > 1 && <section className="glass panel stack noprint" style={{ marginBottom: 14 }}>
+        <div className="between wrap">
+          <span><b>¿Qué conceptos?</b><div className="small muted">{cIncluidos.length} de {plural(lista.length, 'concepto', 'conceptos')}</div></span>
+          <span className="row" style={{ gap: 6 }}>
+            <button className="btn sm ghost" onClick={() => setCElegidos(null)} disabled={todosConceptos}>Todos</button>
+            <button className="btn sm ghost" onClick={() => setCElegidos(new Set())} disabled={!cIncluidos.length}>Ninguno</button>
+          </span>
+        </div>
+        <div className="sel-reg">
+          {lista.map(c => (
+            <label key={c.id} className="sel-p">
+              <input type="checkbox" checked={cSel.has(c.id)} onChange={e => elegirConcepto(c.id, e.target.checked)} />
+              <span className="name">{c.nombre}</span>
+            </label>
+          ))}
+        </div>
+      </section>}
+
       {orden.length > 1 && <section className="glass panel stack noprint" style={{ marginBottom: 14 }}>
         <div className="between wrap">
-          <span><b>¿A quién incluyo?</b><div className="small muted">{incluidos.length} de {plural(orden.length, 'registro', 'registros')}</div></span>
+          <span><b>¿A quién incluyo?</b><div className="small muted">{marcados.length} de {plural(orden.length, 'registro', 'registros')}</div></span>
           <span className="row" style={{ gap: 6 }}>
             <button className="btn sm ghost" onClick={() => setElegidos(null)} disabled={todo}>Todos</button>
-            <button className="btn sm ghost" onClick={() => setElegidos(new Set())} disabled={!incluidos.length}>Ninguno</button>
+            <button className="btn sm ghost" onClick={() => setElegidos(new Set())} disabled={!marcados.length}>Ninguno</button>
           </span>
         </div>
         <div className="sel-reg">
@@ -115,14 +147,14 @@ export function EstadoCuenta() {
                 <label key={p.id} className="sel-p">
                   <input type="checkbox" checked={sel.has(p.id)} onChange={e => elegir([p.id], e.target.checked)} />
                   <span><span className="name">{p.nombre}</span><div className="sub">{p.tipo === 'Familia' ? `Familia · ${plural(integrantes(p), 'persona', 'personas')}` : 'Persona'}</div></span>
-                  <span className="small num muted">{money(totalPersona(p))}</span>
+                  <span className="small num muted">{money(todosConceptos ? totalPersona(p) : p.cargos.reduce((t, g) => t + (cSel.has(g.conceptoId) ? g.monto : 0), 0))}</span>
                 </label>
               ))}
             </Fragment>
           ))}
         </div>
       </section>}
-      {!incluidos.length ? <div className="glass panel empty noprint">Marca al menos un registro para armar el estado de cuenta.</div> : (
+      {!incluidos.length ? <div className="glass panel empty noprint">{!cIncluidos.length ? 'Marca al menos un concepto para armar el estado de cuenta.' : !marcados.length ? 'Marca al menos un registro para armar el estado de cuenta.' : 'Los registros marcados no tienen nada de esos conceptos.'}</div> : (
       <article className="glass panel edc">
         <header className="edc-h">
           <div>

@@ -33,6 +33,11 @@ describe('estado de cuenta', () => {
     expect([g.total, g.pagado, g.saldo]).toEqual([8800, 3800, 5000])
     expect(g.registros).toHaveLength(2)
   })
+  it('solo con los conceptos elegidos', () => {
+    const g = estadoGrupo(ev, ev.personas, '2026-11-08', new Set(['i']))
+    expect([g.total, g.pagado, g.saldo, g.vencido]).toEqual([800, 800, 0, 0])
+    expect(g.registros[1]).toMatchObject({ total: 0, conceptos: [], abonos: [], porValidar: [] })
+  })
 })
 
 describe('subtotalesPorGrupo', () => {
